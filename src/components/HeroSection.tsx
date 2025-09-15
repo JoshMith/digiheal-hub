@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Brain, Calendar, FileText, Users, ArrowRight, Shield, Activity } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/medical-hero.jpg";
 
 const HeroSection = () => {
@@ -39,11 +40,13 @@ const HeroSection = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slide-up">
-            <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground shadow-glow">
-              <Brain className="mr-2 h-5 w-5" />
-              Start Health Assessment
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <Link to="/health-assessment">
+              <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground shadow-glow">
+                <Brain className="mr-2 h-5 w-5" />
+                Start Health Assessment
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
               <Calendar className="mr-2 h-5 w-5" />
               Book Appointment
