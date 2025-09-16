@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Stethoscope, Menu, X } from "lucide-react";
+import { Stethoscope, Menu, X, User } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -38,9 +39,12 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            <Button variant="outline" className="hidden sm:inline-flex">
-              Patient Login
-            </Button>
+            <Link to="/patient-dashboard">
+              <Button variant="outline" className="hidden sm:inline-flex">
+                <User className="mr-2 h-4 w-4" />
+                Patient Login
+              </Button>
+            </Link>
             <Button className="hidden sm:inline-flex bg-gradient-primary hover:opacity-90">
               Staff Portal
             </Button>
@@ -73,9 +77,12 @@ const Header = () => {
                 Contact
               </a>
               <div className="flex flex-col space-y-2 pt-3">
-                <Button variant="outline" size="sm">
-                  Patient Login
-                </Button>
+                <Link to="/patient-dashboard">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <User className="mr-2 h-4 w-4" />
+                    Patient Login
+                  </Button>
+                </Link>
                 <Button size="sm" className="bg-gradient-primary hover:opacity-90">
                   Staff Portal
                 </Button>
