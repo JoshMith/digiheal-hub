@@ -45,9 +45,12 @@ const Header = () => {
                 Patient Login
               </Button>
             </Link>
-            <Button className="hidden sm:inline-flex bg-gradient-primary hover:opacity-90">
-              Staff Portal
-            </Button>
+            <Link to="/staff-portal">
+              <Button className="hidden sm:inline-flex bg-gradient-primary hover:opacity-90">
+                <Stethoscope className="mr-2 h-4 w-4" />
+                Staff Portal
+              </Button>
+            </Link>
             
             {/* Mobile Menu Button */}
             <button
@@ -83,9 +86,12 @@ const Header = () => {
                     Patient Login
                   </Button>
                 </Link>
-                <Button size="sm" className="bg-gradient-primary hover:opacity-90">
-                  Staff Portal
-                </Button>
+                <Link to="/staff-portal">
+                  <Button size="sm" className="bg-gradient-primary hover:opacity-90 w-full">
+                    <Stethoscope className="mr-2 h-4 w-4" />
+                    Staff Portal
+                  </Button>
+                </Link>
               </div>
             </nav>
           </div>
