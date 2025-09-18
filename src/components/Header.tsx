@@ -39,7 +39,7 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            <Link to="/patient-dashboard">
+            <Link to="/auth">
               <Button variant="outline" className="hidden sm:inline-flex">
                 <User className="mr-2 h-4 w-4" />
                 Patient Login
@@ -80,7 +80,7 @@ const Header = () => {
                 Contact
               </a>
               <div className="flex flex-col space-y-2 pt-3">
-                <Link to="/patient-dashboard">
+                <Link to="/auth">
                   <Button variant="outline" size="sm" className="w-full">
                     <User className="mr-2 h-4 w-4" />
                     Patient Login
