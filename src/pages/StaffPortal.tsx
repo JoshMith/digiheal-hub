@@ -30,11 +30,12 @@ import {
   ArrowLeft,
   Download
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const StaffPortal = () => {
   const [activeTab, setActiveTab] = useState("queue");
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   // Mock staff data
   const staffData = {
@@ -160,7 +161,7 @@ const StaffPortal = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => navigate("/staff-settings")}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </Button>
