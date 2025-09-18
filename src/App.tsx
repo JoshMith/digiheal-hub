@@ -9,6 +9,7 @@ import BookAppointment from "./pages/BookAppointment";
 import PatientDashboard from "./pages/PatientDashboard";
 import StaffPortal from "./pages/StaffPortal";
 import Auth from "./pages/Auth";
+import EditProfile from "./pages/EditProfile";
 import NotFound from "./pages/NotFound";
 import Header from "./components/Header";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

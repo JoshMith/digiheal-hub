@@ -22,10 +22,11 @@ import {
   Plus,
   Edit
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const navigate = useNavigate();
 
   // Mock patient data
   const patientData = {
@@ -142,7 +143,7 @@ const PatientDashboard = () => {
                 Book Appointment
               </Button>
             </Link>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => navigate("/edit-profile")}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
             </Button>
