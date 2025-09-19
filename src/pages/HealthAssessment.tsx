@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Brain, AlertTriangle, CheckCircle, Clock, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const HealthAssessment = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     age: "",
@@ -268,7 +269,7 @@ const HealthAssessment = () => {
           >
             Start New Assessment
           </Button>
-          <Button className="flex-1">
+          <Button className="flex-1" onClick={() => navigate('/book-appointment')}>
             Book Appointment
           </Button>
         </div>
