@@ -165,7 +165,7 @@ const StaffPortal = () => {
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </Button>
-            <Button className="bg-accent hover:bg-accent-hover text-accent-foreground">
+            <Button className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate('/new-patient')}>
               <Plus className="mr-2 h-4 w-4" />
               New Patient
             </Button>
