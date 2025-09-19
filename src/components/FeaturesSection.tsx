@@ -179,7 +179,7 @@ const FeaturesSection = () => {
                   <Smartphone className="mr-2 h-5 w-5" />
                   Get Started Today
                 </Button>
-                <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+                <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate('/book-appointment')}>
                   <Clock className="mr-2 h-5 w-5" />
                   Schedule Demo
                 </Button>
