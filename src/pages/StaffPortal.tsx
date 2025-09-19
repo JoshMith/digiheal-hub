@@ -289,7 +289,7 @@ const StaffPortal = () => {
                         <Button size="sm" variant="outline">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground">
+                        <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate(`/patient/${patient.id}`)}>
                           <UserCheck className="h-4 w-4 mr-2" />
                           See Patient
                         </Button>

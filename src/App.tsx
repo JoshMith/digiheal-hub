@@ -11,6 +11,7 @@ import StaffPortal from "./pages/StaffPortal";
 import Auth from "./pages/Auth";
 import EditProfile from "./pages/EditProfile";
 import StaffSettings from "./pages/StaffSettings";
+import PatientDetail from "./pages/PatientDetail";
 import NotFound from "./pages/NotFound";
 import Header from "./components/Header";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />
+            <Route path="/patient/:patientId" element={<PatientDetail />} />
             <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/staff-settings" element={<StaffSettings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
