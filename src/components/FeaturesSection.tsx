@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { 
   Brain, 
   Calendar, 
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 
 const FeaturesSection = () => {
+  const navigate = useNavigate();
   const patientFeatures = [
     {
       icon: Brain,
@@ -173,7 +175,7 @@ const FeaturesSection = () => {
                 with our digital platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground">
+                <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate('/health-assessment')}>
                   <Smartphone className="mr-2 h-5 w-5" />
                   Get Started Today
                 </Button>
