@@ -2,12 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Stethoscope, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  return <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -32,9 +29,7 @@ const Header = () => {
             <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               About
             </Link>
-            <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
-              Contact
-            </a>
+            <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">Contact</a>
           </nav>
 
           {/* Actions */}
@@ -53,19 +48,14 @@ const Header = () => {
             </Link>
             
             {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label="Toggle menu"
-            >
+            <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t animate-fade-in">
+        {isMenuOpen && <div className="md:hidden py-4 border-t animate-fade-in">
             <nav className="flex flex-col space-y-3">
               <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Features
@@ -94,11 +84,8 @@ const Header = () => {
                 </Link>
               </div>
             </nav>
-          </div>
-        )}
+          </div>}
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;
