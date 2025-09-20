@@ -13,6 +13,7 @@ import EditProfile from "./pages/EditProfile";
 import StaffSettings from "./pages/StaffSettings";
 import PatientDetail from "./pages/PatientDetail";
 import NewPatient from "./pages/NewPatient";
+import Services from "./pages/Services";
 import NotFound from "./pages/NotFound";
 import Header from "./components/Header";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/health-assessment" element={<HealthAssessment />} />
             <Route path="/book-appointment" element={<BookAppointment />} />
+            <Route path="/services" element={<Services />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />

@@ -26,9 +26,9 @@ const Header = () => {
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               Features
             </a>
-            <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
+            <Link to="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               Services
-            </a>
+            </Link>
             <a href="#about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               About
             </a>
@@ -70,9 +70,9 @@ const Header = () => {
               <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Features
               </a>
-              <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
+              <Link to="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Services
-              </a>
+              </Link>
               <a href="#about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 About
               </a>
