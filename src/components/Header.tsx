@@ -29,7 +29,7 @@ const Header = () => {
             <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               About
             </Link>
-            <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">Contact</a>
+            <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">Contact</Link>
           </nav>
 
           {/* Actions */}
@@ -66,9 +66,9 @@ const Header = () => {
               <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 About
               </Link>
-              <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
+              <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Contact
-              </a>
+              </Link>
               <div className="flex flex-col space-y-2 pt-3">
                 <Link to="/auth">
                   <Button variant="outline" size="sm" className="w-full">

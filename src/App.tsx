@@ -15,6 +15,7 @@ import PatientDetail from "./pages/PatientDetail";
 import NewPatient from "./pages/NewPatient";
 import Services from "./pages/Services";
 import About from "./pages/About";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Header from "./components/Header";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/book-appointment" element={<BookAppointment />} />
             <Route path="/services" element={<Services />} />
             <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />
