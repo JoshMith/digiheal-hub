@@ -20,9 +20,9 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
+            <Link to="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               Features
-            </a>
+            </Link>
             <Link to="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
               Services
             </Link>
@@ -57,9 +57,9 @@ const Header = () => {
         {/* Mobile Navigation */}
         {isMenuOpen && <div className="md:hidden py-4 border-t animate-fade-in">
             <nav className="flex flex-col space-y-3">
-              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
+              <Link to="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Features
-              </a>
+              </Link>
               <Link to="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-smooth">
                 Services
               </Link>
