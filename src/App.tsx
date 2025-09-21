@@ -13,6 +13,7 @@ import EditProfile from "./pages/EditProfile";
 import StaffSettings from "./pages/StaffSettings";
 import PatientDetail from "./pages/PatientDetail";
 import NewPatient from "./pages/NewPatient";
+import Consultation from "./pages/Consultation";
 import Services from "./pages/Services";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />
             <Route path="/patient/:patientId" element={<PatientDetail />} />
+            <Route path="/consultation/:patientId" element={<Consultation />} />
             <Route path="/new-patient" element={<NewPatient />} />
             <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/staff-settings" element={<StaffSettings />} />

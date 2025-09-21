@@ -153,7 +153,7 @@ const PatientDetail = () => {
                 Current Visit - {patientData.currentVisit.appointmentTime}
               </CardTitle>
               <div className="flex gap-2">
-                <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground">
+                <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate(`/consultation/${patientId}`)}>
                   <Stethoscope className="h-4 w-4 mr-2" />
                   Start Consultation
                 </Button>
