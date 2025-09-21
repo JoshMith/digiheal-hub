@@ -19,6 +19,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Features from "./pages/Features";
 import NotFound from "./pages/NotFound";
+import StaffAuth from "./pages/StaffAuth";
 import Header from "./components/Header";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/features" element={<Features />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/staff-auth" element={<StaffAuth />} />
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/staff-portal" element={<StaffPortal />} />
             <Route path="/patient/:patientId" element={<PatientDetail />} />
