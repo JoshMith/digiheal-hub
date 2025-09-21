@@ -40,7 +40,7 @@ const Header = () => {
                 Patient Login
               </Button>
             </Link>
-            <Link to="/staff-portal">
+            <Link to="/staff-auth">
               <Button className="hidden sm:inline-flex bg-gradient-primary hover:opacity-90">
                 <Stethoscope className="mr-2 h-4 w-4" />
                 Staff Portal
@@ -76,7 +76,7 @@ const Header = () => {
                     Patient Login
                   </Button>
                 </Link>
-                <Link to="/staff-portal">
+                <Link to="/staff-auth">
                   <Button size="sm" className="bg-gradient-primary hover:opacity-90 w-full">
                     <Stethoscope className="mr-2 h-4 w-4" />
                     Staff Portal
