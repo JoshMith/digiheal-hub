@@ -8,7 +8,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-smooth">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-primary">
               <Stethoscope className="h-6 w-6 text-primary-foreground" />
             </div>
@@ -16,7 +16,7 @@ const Header = () => {
               <h1 className="text-xl font-bold text-foreground">DKUT Medical</h1>
               <p className="text-xs text-muted-foreground">Digital Health Platform</p>
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
