@@ -1,61 +1,170 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import HealthAssessment from "./pages/HealthAssessment";
-import BookAppointment from "./pages/BookAppointment";
-import PatientDashboard from "./pages/PatientDashboard";
-import StaffPortal from "./pages/StaffPortal";
-import Auth from "./pages/Auth";
-import EditProfile from "./pages/EditProfile";
-import StaffSettings from "./pages/StaffSettings";
-import PatientDetail from "./pages/PatientDetail";
-import NewPatient from "./pages/NewPatient";
-import Consultation from "./pages/Consultation";
-import Services from "./pages/Services";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Features from "./pages/Features";
-import NotFound from "./pages/NotFound";
-import StaffAuth from "./pages/StaffAuth";
-import Header from "./components/Header";
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/context/authContext';
+import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
+import { Toaster } from '@/components/ui/toaster';
+import { Loader2 } from 'lucide-react';
 
-const queryClient = new QueryClient();
+// Lazy load pages for better performance
+const Index = lazy(() => import('@/pages/Index'));
+const Auth = lazy(() => import('@/pages/Auth'));
+const StaffAuth = lazy(() => import('@/pages/StaffAuth'));
+const PatientDashboard = lazy(() => import('@/pages/PatientDashboard'));
+const StaffPortal = lazy(() => import('@/pages/StaffPortal'));
+const BookAppointment = lazy(() => import('@/pages/BookAppointment'));
+const HealthAssessment = lazy(() => import('@/pages/HealthAssessment'));
+const Services = lazy(() => import('@/pages/Services'));
+const About = lazy(() => import('@/pages/About'));
+const Contact = lazy(() => import('@/pages/Contact'));
+const Features = lazy(() => import('@/pages/Features'));
+const EditProfile = lazy(() => import('@/pages/EditProfile'));
+const PatientDetail = lazy(() => import('@/pages/PatientDetail'));
+const Consultation = lazy(() => import('@/pages/Consultation'));
+const NewPatient = lazy(() => import('@/pages/NewPatient'));
+const StaffSettings = lazy(() => import('@/pages/StaffSettings'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          <Header />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/health-assessment" element={<HealthAssessment />} />
-            <Route path="/book-appointment" element={<BookAppointment />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/staff-auth" element={<StaffAuth />} />
-            <Route path="/patient-dashboard" element={<PatientDashboard />} />
-            <Route path="/staff-portal" element={<StaffPortal />} />
-            <Route path="/patient/:patientId" element={<PatientDetail />} />
-            <Route path="/consultation/:patientId" element={<Consultation />} />
-            <Route path="/new-patient" element={<NewPatient />} />
-            <Route path="/edit-profile" element={<EditProfile />} />
-            <Route path="/staff-settings" element={<StaffSettings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/features" element={<Features />} />
+              
+              {/* Auth routes - redirect if already authenticated */}
+              <Route
+                path="/auth"
+                element={
+                  <PublicRoute redirectAuthenticated>
+                    <Auth />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/staff-auth"
+                element={
+                  <PublicRoute redirectAuthenticated>
+                    <StaffAuth />
+                  </PublicRoute>
+                }
+              />
+
+              {/* Patient protected routes */}
+              <Route
+                path="/patient-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <PatientDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/edit-profile"
+                element={
+                  <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <EditProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/book-appointment"
+                element={
+                  <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <BookAppointment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/health-assessment"
+                element={
+                  <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <HealthAssessment />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Staff protected routes */}
+              <Route
+                path="/staff-portal"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <StaffPortal />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff-settings"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <StaffSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patient/:patientId"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <PatientDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/consultation/:patientId"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <Consultation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/new-patient"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <NewPatient />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+          <Toaster />
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
