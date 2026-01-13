@@ -13,16 +13,15 @@ const StaffAuth = lazy(() => import('@/pages/StaffAuth'));
 const PatientDashboard = lazy(() => import('@/pages/PatientDashboard'));
 const StaffPortal = lazy(() => import('@/pages/StaffPortal'));
 const BookAppointment = lazy(() => import('@/pages/BookAppointment'));
-const HealthAssessment = lazy(() => import('@/pages/HealthAssessment'));
 const Services = lazy(() => import('@/pages/Services'));
 const About = lazy(() => import('@/pages/About'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const Features = lazy(() => import('@/pages/Features'));
 const EditProfile = lazy(() => import('@/pages/EditProfile'));
 const PatientDetail = lazy(() => import('@/pages/PatientDetail'));
-const Consultation = lazy(() => import('@/pages/Consultation'));
 const NewPatient = lazy(() => import('@/pages/NewPatient'));
 const StaffSettings = lazy(() => import('@/pages/StaffSettings'));
+const AnalyticsDashboard = lazy(() => import('@/pages/AnalyticsDashboard'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Create a client
@@ -105,14 +104,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/health-assessment"
-                element={
-                  <ProtectedRoute allowedRoles={['PATIENT']}>
-                    <HealthAssessment />
-                  </ProtectedRoute>
-                }
-              />
 
               {/* Staff protected routes */}
               <Route
@@ -140,18 +131,18 @@ function App() {
                 }
               />
               <Route
-                path="/consultation/:patientId"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <Consultation />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/new-patient"
                 element={
                   <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
                     <NewPatient />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <AnalyticsDashboard />
                   </ProtectedRoute>
                 }
               />

@@ -165,37 +165,6 @@ export type StaffPosition =
   | 'INTERN';
 
 // ============================================
-// Health Assessment Types
-// ============================================
-
-export interface HealthAssessment {
-  id: string;
-  patientId: string;
-  symptoms: string[];
-  predictedDisease: string;
-  severityScore: number;
-  urgency: UrgencyLevel;
-  recommendations: string[];
-  confidence?: number | null;
-  additionalInfo?: Record<string, unknown> | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type UrgencyLevel = 'LOW' | 'MODERATE' | 'URGENT';
-
-export type SymptomSeverity = 'MILD' | 'MODERATE' | 'SEVERE';
-
-export interface HealthAssessmentRequest {
-  symptoms: string[];
-  age?: number;
-  gender?: Gender;
-  duration?: string;
-  severity?: SymptomSeverity;
-  additionalNotes?: string;
-}
-
-// ============================================
 // Appointment Types
 // ============================================
 
@@ -203,7 +172,6 @@ export interface Appointment {
   id: string;
   patientId: string;
   staffId?: string | null;
-  healthAssessmentId?: string | null;
   appointmentDate: string;
   appointmentTime: string;
   duration: number;
@@ -224,10 +192,12 @@ export interface Appointment {
   updatedAt: string;
   patient?: Patient;
   staff?: Staff | null;
+  interaction?: Interaction | null;
 }
 
 export type AppointmentType =
-  | 'CONSULTATION'
+  | 'WALK_IN'
+  | 'SCHEDULED'
   | 'FOLLOW_UP'
   | 'EMERGENCY'
   | 'ROUTINE_CHECKUP'
@@ -249,7 +219,6 @@ export type PriorityLevel = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export interface CreateAppointmentRequest {
   patientId?: string;
   staffId?: string;
-  healthAssessmentId?: string;
   appointmentDate: string;
   appointmentTime: string;
   duration?: number;
@@ -261,36 +230,12 @@ export interface CreateAppointmentRequest {
 }
 
 // ============================================
-// Consultation Types
-// ============================================
-
-export interface Consultation {
-  id: string;
-  appointmentId: string;
-  staffId: string;
-  patientId: string;
-  chiefComplaint: string;
-  historyOfPresentIllness?: string | null;
-  physicalExamination?: Record<string, unknown> | null;
-  vitalSignsId?: string | null;
-  primaryDiagnosis: string;
-  differentialDiagnosis: string[];
-  clinicalAssessment?: string | null;
-  treatmentPlan?: string | null;
-  followUpInstructions?: string | null;
-  consultationNotes?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ============================================
 // Vital Signs Types
 // ============================================
 
 export interface VitalSigns {
   id: string;
   patientId: string;
-  consultationId?: string | null;
   bloodPressureSystolic?: number | null;
   bloodPressureDiastolic?: number | null;
   heartRate?: number | null;
@@ -304,26 +249,114 @@ export interface VitalSigns {
   createdAt: string;
 }
 
+export interface CreateVitalSignsRequest {
+  patientId: string;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  heartRate?: number;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  oxygenSaturation?: number;
+  respiratoryRate?: number;
+}
+
 // ============================================
 // Prescription Types
 // ============================================
 
 export interface Prescription {
   id: string;
-  consultationId: string;
   patientId: string;
+  staffId: string;
+  appointmentId?: string | null;
   medicationName: string;
   dosage: string;
   frequency: string;
   duration: string;
+  quantity?: number | null;
   instructions?: string | null;
   status: PrescriptionStatus;
   prescribedAt: string;
+  expiresAt?: string | null;
+  dispensedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  patient?: Patient;
+  staff?: Staff;
 }
 
-export type PrescriptionStatus = 'ACTIVE' | 'COMPLETED' | 'DISCONTINUED' | 'EXPIRED';
+export type PrescriptionStatus = 'ACTIVE' | 'DISPENSED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+
+export interface CreatePrescriptionRequest {
+  patientId: string;
+  appointmentId?: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  quantity?: number;
+  instructions?: string;
+  expiresAt?: string;
+}
+
+// ============================================
+// Interaction (Time Tracking) Types
+// ============================================
+
+export interface Interaction {
+  id: string;
+  appointmentId: string;
+  patientId: string;
+  staffId: string;
+  department: Department;
+  priority: PriorityLevel;
+  appointmentType: AppointmentType;
+  symptomCount: number;
+
+  // Time tracking phases
+  checkInTime: string;
+  vitalsStartTime?: string | null;
+  vitalsEndTime?: string | null;
+  interactionStartTime?: string | null;
+  interactionEndTime?: string | null;
+  checkoutTime?: string | null;
+
+  // Calculated durations (in minutes)
+  vitalsDuration?: number | null;
+  interactionDuration?: number | null;
+  totalDuration?: number | null;
+
+  // ML prediction
+  predictedDuration?: number | null;
+
+  createdAt: string;
+}
+
+export interface StartInteractionRequest {
+  appointmentId: string;
+  patientId: string;
+  staffId: string;
+  department: Department;
+  priority: PriorityLevel;
+  appointmentType: AppointmentType;
+  symptomCount?: number;
+}
+
+export interface UpdateInteractionRequest {
+  vitalsStartTime?: string;
+  vitalsEndTime?: string;
+  interactionStartTime?: string;
+  interactionEndTime?: string;
+  checkoutTime?: string;
+}
+
+export type InteractionPhase = 
+  | 'CHECKED_IN'
+  | 'VITALS_IN_PROGRESS'
+  | 'VITALS_COMPLETE'
+  | 'INTERACTION_IN_PROGRESS'
+  | 'COMPLETED';
 
 // ============================================
 // Notification Types
@@ -345,11 +378,58 @@ export interface Notification {
 
 export type NotificationType =
   | 'APPOINTMENT_REMINDER'
-  | 'LAB_RESULTS_READY'
+  | 'PRESCRIPTION_READY'
   | 'MEDICATION_REMINDER'
-  | 'URGENT_HEALTH_ALERT'
   | 'SYSTEM_ANNOUNCEMENT'
+  | 'LAB_RESULTS_READY'
   | 'FOLLOW_UP_REQUIRED';
+
+// ============================================
+// Analytics Types
+// ============================================
+
+export interface AnalyticsSummary {
+  totalPatients: number;
+  todayPatients: number;
+  weekPatients: number;
+  monthPatients: number;
+  averageWaitTime: number;
+  averageInteractionDuration: number;
+  appointmentCompletionRate: number;
+  noShowRate: number;
+}
+
+export interface DepartmentStats {
+  department: Department;
+  patientCount: number;
+  averageWaitTime: number;
+  averageInteractionTime: number;
+}
+
+export interface TimeSeriesData {
+  date: string;
+  value: number;
+}
+
+export interface AppointmentTypeStats {
+  type: AppointmentType;
+  count: number;
+  percentage: number;
+}
+
+export interface StaffPerformance {
+  staffId: string;
+  staffName: string;
+  patientsServed: number;
+  averageInteractionTime: number;
+  rating?: number;
+}
+
+export interface MLPredictionStats {
+  totalPredictions: number;
+  accuracyRate: number;
+  averageError: number;
+}
 
 // ============================================
 // API Response Types
@@ -435,6 +515,17 @@ export const APPOINTMENT_STATUS_DISPLAY: Record<AppointmentStatus, string> = {
   NO_SHOW: 'No Show',
 };
 
+export const APPOINTMENT_TYPE_DISPLAY: Record<AppointmentType, string> = {
+  WALK_IN: 'Walk-in',
+  SCHEDULED: 'Scheduled',
+  FOLLOW_UP: 'Follow-up',
+  EMERGENCY: 'Emergency',
+  ROUTINE_CHECKUP: 'Routine Checkup',
+  VACCINATION: 'Vaccination',
+  LAB_TEST: 'Lab Test',
+  IMAGING: 'Imaging',
+};
+
 export const PRIORITY_DISPLAY: Record<PriorityLevel, string> = {
   LOW: 'Low',
   NORMAL: 'Normal',
@@ -442,8 +533,10 @@ export const PRIORITY_DISPLAY: Record<PriorityLevel, string> = {
   URGENT: 'Urgent',
 };
 
-export const URGENCY_DISPLAY: Record<UrgencyLevel, string> = {
-  LOW: 'Low',
-  MODERATE: 'Moderate',
-  URGENT: 'Urgent',
+export const PRESCRIPTION_STATUS_DISPLAY: Record<PrescriptionStatus, string> = {
+  ACTIVE: 'Active',
+  DISPENSED: 'Dispensed',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  EXPIRED: 'Expired',
 };
