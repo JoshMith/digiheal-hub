@@ -47,7 +47,8 @@ export class ApiError extends Error {
 // Request options type
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
-  params?: Record<string, string | number | boolean | undefined>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params?: Record<string, any>;
 }
 
 // Build URL with query params
@@ -183,7 +184,8 @@ async function tryRefreshToken(): Promise<boolean> {
 
 // API methods
 export const api = {
-  get: <T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get: <T>(endpoint: string, params?: Record<string, any>) =>
     fetchApi<T>(endpoint, { method: 'GET', params }),
 
   post: <T>(endpoint: string, body?: unknown) =>
