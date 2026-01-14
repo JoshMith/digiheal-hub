@@ -21,17 +21,21 @@ import {
   CheckCircle,
   Clock,
   Pill,
-  Stethoscope,
+  Play,
   Heart,
   Thermometer,
   Scale,
-  Eye
+  Eye,
+  Timer
 } from "lucide-react";
+import InteractionTimer from "@/components/InteractionTimer";
 
 const PatientDetail = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [showTimer, setShowTimer] = useState(false);
+  const [interactionId, setInteractionId] = useState<string | null>(null);
 
   // Mock patient data - in real app, fetch based on patientId
   const patientData = {
@@ -112,6 +116,19 @@ const PatientDetail = () => {
     }
   };
 
+  const handleStartInteraction = () => {
+    // In real app, this would call the API to start an interaction
+    setInteractionId("interaction-" + Date.now());
+    setShowTimer(true);
+  };
+
+  const handleTimerComplete = (totalDuration: number) => {
+    console.log("Interaction completed with duration:", totalDuration, "seconds");
+    setShowTimer(false);
+    setInteractionId(null);
+    // In real app, this would update the interaction record
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
       <div className="container mx-auto px-4 py-8">
@@ -144,6 +161,17 @@ const PatientDetail = () => {
           </div>
         </div>
 
+        {/* Interaction Timer */}
+        {showTimer && interactionId && (
+          <div className="mb-8">
+            <InteractionTimer
+              appointmentId={interactionId}
+              patientName={patientData.name}
+              onComplete={handleTimerComplete}
+            />
+          </div>
+        )}
+
         {/* Current Visit Alert */}
         <Card className="mb-8 border-l-4 border-l-destructive shadow-medium">
           <CardHeader>
@@ -153,10 +181,17 @@ const PatientDetail = () => {
                 Current Visit - {patientData.currentVisit.appointmentTime}
               </CardTitle>
               <div className="flex gap-2">
-                <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate(`/consultation/${patientId}`)}>
-                  <Stethoscope className="h-4 w-4 mr-2" />
-                  Start Consultation
-                </Button>
+                {!showTimer ? (
+                  <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={handleStartInteraction}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Interaction
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" disabled>
+                    <Timer className="h-4 w-4 mr-2" />
+                    In Progress
+                  </Button>
+                )}
                 <Button size="sm" variant="outline">
                   <Eye className="h-4 w-4 mr-2" />
                   View Queue
@@ -371,11 +406,11 @@ const PatientDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
-                  Consultation Notes
+                  Visit Notes
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea placeholder="Enter consultation notes here..." rows={8} />
+                <Textarea placeholder="Enter visit notes here..." rows={8} />
                 <Button className="mt-4">Save Notes</Button>
               </CardContent>
             </Card>

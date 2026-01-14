@@ -89,9 +89,9 @@ const Services = () => {
                 Book Appointment
               </Button>
             </Link>
-            <Link to="/health-assessment">
+            <Link to="/auth">
               <Button variant="outline" size="lg">
-                Health Assessment
+                Patient Portal
               </Button>
             </Link>
           </div>
@@ -134,7 +134,7 @@ const Services = () => {
                   </ul>
                   <Link to="/book-appointment">
                     <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                      Book Consultation
+                      Book Appointment
                     </Button>
                   </Link>
                 </CardContent>
