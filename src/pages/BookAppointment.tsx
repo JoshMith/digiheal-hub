@@ -32,7 +32,7 @@ const BookAppointment = () => {
   ];
 
   const appointmentTypes = [
-    "Consultation", "Follow-up", "Check-up", "Emergency", "Vaccination"
+    "General Visit", "Follow-up", "Check-up", "Emergency", "Vaccination"
   ];
 
   const handleSubmit = (e: React.FormEvent) => {

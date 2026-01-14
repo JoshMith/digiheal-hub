@@ -264,8 +264,8 @@ const About = () => {
               <Card className="p-6">
                 <h3 className="text-xl font-bold text-foreground mb-4">Get Started Today</h3>
                 <p className="text-muted-foreground mb-6">
-                  Ready to experience exceptional healthcare? Schedule your appointment or take our 
-                  health assessment to get personalized recommendations.
+                  Ready to experience exceptional healthcare? Schedule your appointment 
+                  or access your patient portal for personalized care.
                 </p>
                 <div className="space-y-3">
                   <Link to="/book-appointment">
@@ -273,14 +273,14 @@ const About = () => {
                       Book Appointment
                     </Button>
                   </Link>
-                  <Link to="/health-assessment">
+                  <Link to="/auth">
                     <Button variant="outline" className="w-full">
-                      Health Assessment
+                      Patient Portal
                     </Button>
                   </Link>
-                  <Link to="/auth">
+                  <Link to="/contact">
                     <Button variant="ghost" className="w-full">
-                      Patient Portal
+                      Contact Us
                     </Button>
                   </Link>
                 </div>

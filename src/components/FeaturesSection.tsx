@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { 
-  Brain, 
   Calendar, 
   FileText, 
   Users, 
@@ -13,18 +12,14 @@ import {
   Heart,
   Clock,
   MessageSquare,
-  CheckCircle 
+  CheckCircle,
+  Pill,
+  Timer
 } from "lucide-react";
 
 const FeaturesSection = () => {
   const navigate = useNavigate();
   const patientFeatures = [
-    {
-      icon: Brain,
-      title: "AI Health Assessment",
-      description: "Get instant health insights with our advanced AI that analyzes symptoms and provides personalized recommendations.",
-      highlights: ["Symptom analysis", "Risk assessment", "Health guidance", "Emergency alerts"]
-    },
     {
       icon: Calendar,
       title: "Smart Appointments",
@@ -32,16 +27,22 @@ const FeaturesSection = () => {
       highlights: ["Real-time booking", "SMS reminders", "Easy rescheduling", "Queue management"]
     },
     {
+      icon: Pill,
+      title: "Prescription Management",
+      description: "Track your medications, view prescription history, and request refills all in one place.",
+      highlights: ["Active prescriptions", "Refill requests", "Medication history", "Digital records"]
+    },
+    {
       icon: FileText,
       title: "Digital Health Records",
       description: "Access your complete medical history, prescriptions, and lab results securely from anywhere.",
-      highlights: ["Complete history", "Lab results", "Prescription tracking", "Secure access"]
+      highlights: ["Complete history", "Lab results", "Visit summaries", "Secure access"]
     },
     {
       icon: Bell,
       title: "Health Notifications",
-      description: "Stay informed with timely health updates, appointment reminders, and wellness tips.",
-      highlights: ["Appointment alerts", "Health tips", "Prescription reminders", "Emergency notifications"]
+      description: "Stay informed with timely health updates, appointment reminders, and prescription alerts.",
+      highlights: ["Appointment alerts", "Prescription reminders", "Visit notifications", "System updates"]
     }
   ];
 
@@ -53,22 +54,22 @@ const FeaturesSection = () => {
       highlights: ["Priority queuing", "Patient summaries", "Real-time updates", "Emergency handling"]
     },
     {
+      icon: Timer,
+      title: "Time Tracking & Analytics",
+      description: "Track interaction times with patients to optimize workflow and predict wait times using ML.",
+      highlights: ["Phase tracking", "Duration analytics", "Wait time prediction", "Performance insights"]
+    },
+    {
       icon: BarChart3,
       title: "Analytics Dashboard",
       description: "Gain insights into patient trends, appointment patterns, and operational efficiency.",
-      highlights: ["Health trends", "Usage analytics", "Performance metrics", "Predictive insights"]
+      highlights: ["Patient flow", "Department stats", "Staff performance", "Predictive insights"]
     },
     {
       icon: Shield,
       title: "Secure Platform",
       description: "HIPAA-compliant system with end-to-end encryption and role-based access control.",
       highlights: ["HIPAA compliant", "Data encryption", "Access control", "Audit trails"]
-    },
-    {
-      icon: MessageSquare,
-      title: "Communication Hub",
-      description: "Streamlined communication with patients through integrated messaging and notifications.",
-      highlights: ["Patient messaging", "Automated alerts", "Follow-up scheduling", "Care coordination"]
     }
   ];
 
@@ -86,7 +87,7 @@ const FeaturesSection = () => {
             <span className="block text-primary">Modern Healthcare</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Our platform serves both patients and healthcare providers with cutting-edge technology 
+            Our platform serves both patients and healthcare providers with smart tools 
             designed to improve health outcomes and operational efficiency.
           </p>
         </div>
@@ -175,13 +176,13 @@ const FeaturesSection = () => {
                 with our digital platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate('/health-assessment')}>
+                <Button size="lg" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate('/auth')}>
                   <Smartphone className="mr-2 h-5 w-5" />
-                  Get Started Today
+                  Patient Portal
                 </Button>
-                <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate('/book-appointment')}>
+                <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate('/staff-auth')}>
                   <Clock className="mr-2 h-5 w-5" />
-                  Schedule Demo
+                  Staff Portal
                 </Button>
               </div>
             </CardContent>

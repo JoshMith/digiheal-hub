@@ -2,40 +2,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Stethoscope, Brain, Calendar, FileText, Bell, BarChart3, 
+  Stethoscope, Calendar, FileText, Bell, BarChart3, 
   Shield, MessageSquare, Users, Clock, CheckCircle, Star,
-  Smartphone, Monitor, Heart, Database, Lock, Zap
+  Smartphone, Monitor, Heart, Database, Lock, Zap, Pill, Timer
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Features = () => {
   const patientFeatures = [
     {
-      icon: Brain,
-      title: "AI Health Assessment",
-      description: "Get personalized health insights with our advanced AI diagnostic system",
-      features: ["Symptom analysis", "Risk assessment", "Treatment recommendations", "24/7 availability"],
-      badge: "AI Powered"
-    },
-    {
       icon: Calendar,
       title: "Smart Appointments",
-      description: "Book and manage appointments with intelligent scheduling",
-      features: ["Real-time availability", "Automatic reminders", "Easy rescheduling", "Queue management"],
+      description: "Book and manage appointments with intelligent scheduling and queue management",
+      features: ["Real-time availability", "Automatic reminders", "Easy rescheduling", "Queue position tracking"],
       badge: "Smart"
+    },
+    {
+      icon: Pill,
+      title: "Prescription Management",
+      description: "Track your medications, view prescription history, and request refills digitally",
+      features: ["Active prescriptions", "Refill requests", "Medication history", "Expiry alerts"],
+      badge: "Digital"
     },
     {
       icon: FileText,
       title: "Digital Health Records",
       description: "Secure, comprehensive digital health record management",
-      features: ["Complete medical history", "Test results", "Prescription tracking", "Easy sharing"],
+      features: ["Complete medical history", "Test results", "Visit summaries", "Easy sharing"],
       badge: "Secure"
     },
     {
       icon: Bell,
       title: "Health Notifications",
       description: "Stay informed with personalized health alerts and reminders",
-      features: ["Medication reminders", "Appointment alerts", "Health tips", "Emergency notifications"],
+      features: ["Medication reminders", "Appointment alerts", "Prescription ready", "System updates"],
       badge: "Proactive"
     }
   ];
@@ -45,14 +45,21 @@ const Features = () => {
       icon: Users,
       title: "Patient Queue Management",
       description: "Efficiently manage patient flow and reduce waiting times",
-      features: ["Real-time queue status", "Priority management", "Automated check-in", "Wait time optimization"],
+      features: ["Real-time queue status", "Priority management", "Automated check-in", "Wait time display"],
       badge: "Efficient"
+    },
+    {
+      icon: Timer,
+      title: "Time Tracking Service",
+      description: "Track patient interaction phases with ML-powered duration prediction",
+      features: ["Phase tracking", "Duration analytics", "Predicted wait times", "Performance metrics"],
+      badge: "ML Powered"
     },
     {
       icon: BarChart3,
       title: "Analytics Dashboard",
       description: "Comprehensive insights into patient care and clinic operations",
-      features: ["Patient analytics", "Performance metrics", "Revenue tracking", "Predictive insights"],
+      features: ["Patient flow analytics", "Department stats", "Staff performance", "Predictive insights"],
       badge: "Insights"
     },
     {
@@ -61,13 +68,6 @@ const Features = () => {
       description: "Enterprise-grade security for patient data protection",
       features: ["HIPAA compliant", "End-to-end encryption", "Access controls", "Audit trails"],
       badge: "Compliant"
-    },
-    {
-      icon: MessageSquare,
-      title: "Communication Hub",
-      description: "Streamlined communication between staff and patients",
-      features: ["Secure messaging", "Video consultations", "Group discussions", "File sharing"],
-      badge: "Connected"
     }
   ];
 
@@ -234,14 +234,14 @@ const Features = () => {
               Join thousands of patients and healthcare providers who trust DKUT Medical for their digital health needs.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/health-assessment">
+              <Link to="/auth">
                 <Button size="lg" variant="secondary" className="bg-background text-foreground hover:bg-background/90">
-                  Start Health Assessment
+                  Patient Portal
                 </Button>
               </Link>
-              <Link to="/auth">
+              <Link to="/staff-auth">
                 <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                  Sign Up Now
+                  Staff Portal
                 </Button>
               </Link>
             </div>
