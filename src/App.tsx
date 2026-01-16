@@ -22,6 +22,7 @@ const PatientDetail = lazy(() => import('@/pages/PatientDetail'));
 const NewPatient = lazy(() => import('@/pages/NewPatient'));
 const StaffSettings = lazy(() => import('@/pages/StaffSettings'));
 const AnalyticsDashboard = lazy(() => import('@/pages/AnalyticsDashboard'));
+const AdminPortal = lazy(() => import('@/pages/AdminPortal'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Create a client
@@ -60,7 +61,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/features" element={<Features />} />
-              
+
               {/* Auth routes - redirect if already authenticated */}
               <Route
                 path="/auth"
@@ -143,6 +144,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
                     <AnalyticsDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-portal"
+                element={
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
+                    <AdminPortal />
                   </ProtectedRoute>
                 }
               />
