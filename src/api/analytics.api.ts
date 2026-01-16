@@ -1,9 +1,9 @@
 import api from './client';
 import type { 
-  AnalyticsSummary,
-  DepartmentStats,
-  TimeSeriesData,
-  AppointmentTypeStats,
+  DashboardMetrics,
+  PatientFlowData,
+  WaitTimeData,
+  DepartmentLoad,
   StaffPerformance,
   MLPredictionStats,
   Department
@@ -15,43 +15,60 @@ export interface AnalyticsDateRange {
 }
 
 export const analyticsApi = {
-  // Get summary statistics
-  getSummary: (dateRange?: AnalyticsDateRange) => 
-    api.get<AnalyticsSummary>('/analytics/summary', dateRange),
+  /**
+   * Get dashboard metrics
+   * GET /analytics/dashboard
+   */
+  getDashboard: (params?: AnalyticsDateRange) => 
+    api.get<DashboardMetrics>('/analytics/dashboard', params),
 
-  // Get patient flow data (time series)
-  getPatientFlow: (params: AnalyticsDateRange & { granularity?: 'hourly' | 'daily' | 'weekly' }) => 
-    api.get<TimeSeriesData[]>('/analytics/patient-flow', params),
+  /**
+   * Get patient flow data
+   * GET /analytics/patient-flow
+   */
+  getPatientFlow: (params: AnalyticsDateRange & { 
+    granularity?: 'hourly' | 'daily' | 'weekly';
+    department?: Department;
+  }) => 
+    api.get<PatientFlowData[]>('/analytics/patient-flow', params),
 
-  // Get department statistics
-  getDepartmentStats: (dateRange?: AnalyticsDateRange) => 
-    api.get<DepartmentStats[]>('/analytics/departments', dateRange),
+  /**
+   * Get wait time analytics
+   * GET /analytics/wait-times
+   */
+  getWaitTimes: (params: AnalyticsDateRange & { 
+    department?: Department;
+    granularity?: 'hourly' | 'daily';
+  }) => 
+    api.get<WaitTimeData[]>('/analytics/wait-times', params),
 
-  // Get appointment type distribution
-  getAppointmentTypeStats: (dateRange?: AnalyticsDateRange) => 
-    api.get<AppointmentTypeStats[]>('/analytics/appointment-types', dateRange),
+  /**
+   * Get department utilization/load
+   * GET /analytics/department-load
+   */
+  getDepartmentLoad: (params?: AnalyticsDateRange) => 
+    api.get<DepartmentLoad[]>('/analytics/department-load', params),
 
-  // Get average wait times (time series)
-  getWaitTimes: (params: AnalyticsDateRange & { department?: Department }) => 
-    api.get<TimeSeriesData[]>('/analytics/wait-times', params),
-
-  // Get staff performance metrics
-  getStaffPerformance: (params?: AnalyticsDateRange & { department?: Department }) => 
+  /**
+   * Get staff performance metrics
+   * GET /analytics/staff-performance
+   */
+  getStaffPerformance: (params?: AnalyticsDateRange & { 
+    department?: Department;
+    staffId?: string;
+  }) => 
     api.get<StaffPerformance[]>('/analytics/staff-performance', params),
 
-  // Get ML prediction accuracy stats
-  getPredictionStats: (dateRange?: AnalyticsDateRange) => 
-    api.get<MLPredictionStats>('/analytics/prediction-accuracy', dateRange),
+  /**
+   * Get ML prediction accuracy
+   * GET /analytics/prediction-accuracy
+   */
+  getPredictionAccuracy: (params?: AnalyticsDateRange) => 
+    api.get<MLPredictionStats>('/analytics/prediction-accuracy', params),
 
-  // Get no-show rate data
-  getNoShowRate: (params: AnalyticsDateRange & { groupBy?: 'day' | 'week' | 'month' }) => 
-    api.get<TimeSeriesData[]>('/analytics/no-show-rate', params),
-
-  // Get peak hours analysis
-  getPeakHours: (dateRange?: AnalyticsDateRange) => 
-    api.get<{ hour: number; avgPatients: number }[]>('/analytics/peak-hours', dateRange),
-
-  // Get today's quick stats
+  /**
+   * Get today's quick stats (convenience method)
+   */
   getTodayStats: () => 
     api.get<{
       patientsToday: number;
@@ -59,10 +76,21 @@ export const analyticsApi = {
       appointmentsPending: number;
       averageWaitTime: number;
       prescriptionsIssued: number;
-    }>('/analytics/today'),
+    }>('/analytics/dashboard'),
 
-  // Export analytics data
-  exportData: (params: AnalyticsDateRange & { format: 'csv' | 'json' }) => 
+  /**
+   * Get peak hours analysis
+   */
+  getPeakHours: (params?: AnalyticsDateRange) => 
+    api.get<{ hour: number; avgPatients: number }[]>('/analytics/peak-hours', params),
+
+  /**
+   * Export analytics data
+   */
+  exportData: (params: AnalyticsDateRange & { 
+    format: 'csv' | 'json';
+    type: 'patient-flow' | 'wait-times' | 'staff-performance';
+  }) => 
     api.get<{ downloadUrl: string }>('/analytics/export', params),
 };
 

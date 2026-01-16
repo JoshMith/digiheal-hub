@@ -2,67 +2,119 @@ import api from './client';
 import type { 
   Appointment, 
   CreateAppointmentRequest, 
-  ApiResponse,
+  UpdateAppointmentRequest,
   PaginationParams,
-  Department
+  Department,
+  TimeSlot,
+  AppointmentStats
 } from '@/types/api.types';
 
 export const appointmentApi = {
-  // Create new appointment
+  /**
+   * Create new appointment
+   * POST /appointments
+   */
   create: (data: CreateAppointmentRequest) => 
     api.post<Appointment>('/appointments', data),
 
-  // Get appointment by ID
+  /**
+   * Get appointment by ID
+   * GET /appointments/:id
+   */
   getById: (appointmentId: string) => 
     api.get<Appointment>(`/appointments/${appointmentId}`),
 
-  // Get patient appointments
+  /**
+   * Get patient appointments
+   * GET /appointments/patient/:patientId
+   */
   getByPatient: (patientId: string, params?: PaginationParams & { status?: string }) => 
     api.get<Appointment[]>(`/appointments/patient/${patientId}`, params),
 
-  // Get current patient's appointments
-  getMyAppointments: (params?: PaginationParams & { status?: string }) => 
-    api.get<Appointment[]>('/appointments/my', params),
-
-  // Get upcoming appointments
-  getUpcoming: (patientId?: string) => 
-    api.get<Appointment[]>('/appointments/upcoming', { patientId }),
-
-  // Update appointment
-  update: (appointmentId: string, data: Partial<Appointment>) => 
-    api.put<Appointment>(`/appointments/${appointmentId}`, data),
-
-  // Cancel appointment
-  cancel: (appointmentId: string, reason?: string) => 
-    api.post<Appointment>(`/appointments/${appointmentId}/cancel`, { reason }),
-
-  // Check-in for appointment
-  checkIn: (appointmentId: string) => 
-    api.post<Appointment>(`/appointments/${appointmentId}/check-in`),
-
-  // Start appointment (staff)
-  start: (appointmentId: string) => 
-    api.post<Appointment>(`/appointments/${appointmentId}/start`),
-
-  // Complete appointment (staff)
-  complete: (appointmentId: string, notes?: string) => 
-    api.post<Appointment>(`/appointments/${appointmentId}/complete`, { notes }),
-
-  // Get today's queue by department
-  getTodayQueue: (department: Department) => 
-    api.get<Appointment[]>(`/appointments/department/${department}/today`),
-
-  // Get available time slots
-  getAvailableSlots: (date: string, department: Department, staffId?: string) => 
-    api.get<string[]>('/appointments/slots/available', { date, department, staffId }),
-
-  // Get staff appointments
+  /**
+   * Get staff appointments
+   * GET /appointments/staff/:staffId
+   */
   getByStaff: (staffId: string, params?: PaginationParams & { date?: string }) => 
     api.get<Appointment[]>(`/appointments/staff/${staffId}`, params),
 
-  // Get today's appointments (staff)
+  /**
+   * Get today's appointments by department
+   * GET /appointments/today/:department
+   */
+  getTodayByDepartment: (department: Department) => 
+    api.get<Appointment[]>(`/appointments/today/${department}`),
+
+  /**
+   * Update appointment
+   * PUT /appointments/:id
+   */
+  update: (appointmentId: string, data: UpdateAppointmentRequest) => 
+    api.put<Appointment>(`/appointments/${appointmentId}`, data),
+
+  /**
+   * Check-in for appointment
+   * PUT /appointments/:id/checkin
+   */
+  checkIn: (appointmentId: string) => 
+    api.put<Appointment>(`/appointments/${appointmentId}/checkin`),
+
+  /**
+   * Start appointment
+   * PUT /appointments/:id/start
+   */
+  start: (appointmentId: string) => 
+    api.put<Appointment>(`/appointments/${appointmentId}/start`),
+
+  /**
+   * Complete appointment
+   * PUT /appointments/:id/complete
+   */
+  complete: (appointmentId: string, notes?: string) => 
+    api.put<Appointment>(`/appointments/${appointmentId}/complete`, { notes }),
+
+  /**
+   * Cancel appointment
+   * DELETE /appointments/:id/cancel
+   */
+  cancel: (appointmentId: string, reason?: string) => 
+    api.delete<Appointment>(`/appointments/${appointmentId}/cancel`, { reason }),
+
+  /**
+   * Get available time slots
+   * GET /appointments/slots
+   */
+  getAvailableSlots: (params: { 
+    date: string; 
+    department: Department; 
+    staffId?: string 
+  }) => 
+    api.get<TimeSlot[]>('/appointments/slots', params),
+
+  /**
+   * Get appointment statistics
+   * GET /appointments/stats
+   */
+  getStats: (params?: { 
+    startDate?: string; 
+    endDate?: string; 
+    department?: Department 
+  }) => 
+    api.get<AppointmentStats>('/appointments/stats', params),
+
+  /**
+   * Get today's appointments for staff
+   * Convenience method
+   */
   getToday: (staffId?: string) => 
     api.get<Appointment[]>('/appointments/today', { staffId }),
+
+  /**
+   * Get upcoming appointments
+   * Convenience method
+   */
+  getUpcoming: (patientId?: string) => 
+    api.get<Appointment[]>('/appointments/upcoming', { patientId }),
 };
 
 export default appointmentApi;

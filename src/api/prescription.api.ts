@@ -2,51 +2,89 @@ import api from './client';
 import type { 
   Prescription, 
   CreatePrescriptionRequest, 
-  ApiResponse,
+  UpdatePrescriptionRequest,
   PaginationParams,
-  PrescriptionStatus
+  PrescriptionStatus,
+  PrescriptionStats
 } from '@/types/api.types';
 
 export const prescriptionApi = {
-  // Create new prescription (staff only)
+  /**
+   * Create prescription (staff/admin only)
+   * POST /prescriptions
+   */
   create: (data: CreatePrescriptionRequest) => 
     api.post<Prescription>('/prescriptions', data),
 
-  // Get prescription by ID
+  /**
+   * Get prescription by ID (staff/admin only)
+   * GET /prescriptions/:id
+   */
   getById: (prescriptionId: string) => 
     api.get<Prescription>(`/prescriptions/${prescriptionId}`),
 
-  // Get patient prescriptions
+  /**
+   * Get patient prescriptions (staff/admin only)
+   * GET /prescriptions/patient/:patientId
+   */
   getByPatient: (patientId: string, params?: PaginationParams & { status?: PrescriptionStatus }) => 
     api.get<Prescription[]>(`/prescriptions/patient/${patientId}`, params),
 
-  // Get current patient's prescriptions
-  getMyPrescriptions: (params?: PaginationParams & { status?: PrescriptionStatus }) => 
-    api.get<Prescription[]>('/prescriptions/my', params),
+  /**
+   * Get staff prescriptions (staff/admin only)
+   * GET /prescriptions/staff/:staffId
+   */
+  getByStaff: (staffId: string, params?: PaginationParams) => 
+    api.get<Prescription[]>(`/prescriptions/staff/${staffId}`, params),
 
-  // Get active prescriptions for patient
-  getActive: (patientId?: string) => 
-    api.get<Prescription[]>('/prescriptions/active', { patientId }),
+  /**
+   * Update prescription (staff/admin only)
+   * PUT /prescriptions/:id
+   */
+  update: (prescriptionId: string, data: UpdatePrescriptionRequest) => 
+    api.put<Prescription>(`/prescriptions/${prescriptionId}`, data),
 
-  // Update prescription status (staff/pharmacist)
-  updateStatus: (prescriptionId: string, status: PrescriptionStatus) => 
-    api.patch<Prescription>(`/prescriptions/${prescriptionId}/status`, { status }),
-
-  // Dispense prescription (pharmacist)
+  /**
+   * Dispense prescription (staff/admin only)
+   * POST /prescriptions/:id/dispense
+   */
   dispense: (prescriptionId: string) => 
     api.post<Prescription>(`/prescriptions/${prescriptionId}/dispense`),
 
-  // Get pending prescriptions for pharmacy
-  getPending: () => 
-    api.get<Prescription[]>('/prescriptions/pending'),
+  /**
+   * Complete prescription (staff/admin only)
+   * POST /prescriptions/:id/complete
+   */
+  complete: (prescriptionId: string) => 
+    api.post<Prescription>(`/prescriptions/${prescriptionId}/complete`),
 
-  // Get prescription history
-  getHistory: (patientId: string) => 
-    api.get<Prescription[]>(`/prescriptions/patient/${patientId}/history`),
+  /**
+   * Cancel prescription (staff/admin only)
+   * POST /prescriptions/:id/cancel
+   */
+  cancel: (prescriptionId: string, reason?: string) => 
+    api.post<Prescription>(`/prescriptions/${prescriptionId}/cancel`, { reason }),
 
-  // Request refill (patient)
-  requestRefill: (prescriptionId: string) => 
-    api.post<Prescription>(`/prescriptions/${prescriptionId}/refill-request`),
+  /**
+   * Get active prescriptions (staff/admin only)
+   * GET /prescriptions/active
+   */
+  getActive: (params?: PaginationParams) => 
+    api.get<Prescription[]>('/prescriptions/active', params),
+
+  /**
+   * Get expiring prescriptions (staff/admin only)
+   * GET /prescriptions/expiring
+   */
+  getExpiring: (params?: PaginationParams & { days?: number }) => 
+    api.get<Prescription[]>('/prescriptions/expiring', params),
+
+  /**
+   * Get prescription statistics (staff/admin only)
+   * GET /prescriptions/stats
+   */
+  getStats: (params?: { startDate?: string; endDate?: string }) => 
+    api.get<PrescriptionStats>('/prescriptions/stats', params),
 };
 
 export default prescriptionApi;
