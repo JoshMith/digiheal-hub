@@ -2,9 +2,9 @@ import api from './client';
 import type { 
   Interaction, 
   StartInteractionRequest, 
-  UpdateInteractionRequest,
-  ApiResponse,
-  PaginationParams
+  PaginationParams,
+  QueueItem,
+  InteractionStats
 } from '@/types/api.types';
 
 export interface DurationPredictionRequest {
@@ -12,81 +12,125 @@ export interface DurationPredictionRequest {
   priority: string;
   appointmentType: string;
   symptomCount: number;
+  timeOfDay?: number;
+  dayOfWeek?: number;
 }
 
 export interface DurationPredictionResponse {
   predictedDuration: number;
   confidence: number;
+  modelVersion?: string;
+}
+
+export interface TrainingDataExport {
+  id: string;
+  department: string;
+  priority: string;
+  appointmentType: string;
+  symptomCount: number;
+  actualDuration: number;
+  predictedDuration: number;
+  timeOfDay: number;
+  dayOfWeek: number;
 }
 
 export const interactionApi = {
-  // Start a new interaction (check-in)
+  /**
+   * Start a new interaction (check-in)
+   * POST /interactions/start
+   */
   start: (data: StartInteractionRequest) => 
-    api.post<Interaction>('/interactions', data),
+    api.post<Interaction>('/interactions/start', data),
 
-  // Get interaction by ID
+  /**
+   * Start vitals phase
+   * POST /interactions/:id/vitals-start
+   */
+  startVitals: (interactionId: string) => 
+    api.post<Interaction>(`/interactions/${interactionId}/vitals-start`),
+
+  /**
+   * End vitals phase
+   * POST /interactions/:id/vitals-end
+   */
+  endVitals: (interactionId: string) => 
+    api.post<Interaction>(`/interactions/${interactionId}/vitals-end`),
+
+  /**
+   * Start consultation/interaction
+   * POST /interactions/:id/consultation-start
+   */
+  startConsultation: (interactionId: string) => 
+    api.post<Interaction>(`/interactions/${interactionId}/consultation-start`),
+
+  /**
+   * End consultation/interaction
+   * POST /interactions/:id/consultation-end
+   */
+  endConsultation: (interactionId: string) => 
+    api.post<Interaction>(`/interactions/${interactionId}/consultation-end`),
+
+  /**
+   * Checkout patient
+   * POST /interactions/:id/checkout
+   */
+  checkout: (interactionId: string) => 
+    api.post<Interaction>(`/interactions/${interactionId}/checkout`),
+
+  /**
+   * Get current queue
+   * GET /interactions/queue
+   */
+  getQueue: (params?: { department?: string; staffId?: string }) => 
+    api.get<QueueItem[]>('/interactions/queue', params),
+
+  /**
+   * Get interaction statistics
+   * GET /interactions/stats
+   */
+  getStats: (params?: { startDate?: string; endDate?: string; department?: string }) => 
+    api.get<InteractionStats>('/interactions/stats', params),
+
+  /**
+   * Get interaction by ID
+   * GET /interactions/:id
+   */
   getById: (interactionId: string) => 
     api.get<Interaction>(`/interactions/${interactionId}`),
 
-  // Get interaction by appointment ID
-  getByAppointment: (appointmentId: string) => 
-    api.get<Interaction>(`/interactions/appointment/${appointmentId}`),
+  /**
+   * Get patient interactions
+   * GET /interactions/patient/:patientId
+   */
+  getByPatient: (patientId: string, params?: PaginationParams) => 
+    api.get<Interaction[]>(`/interactions/patient/${patientId}`, params),
 
-  // Update interaction phases
-  update: (interactionId: string, data: UpdateInteractionRequest) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, data),
+  /**
+   * Get staff interactions
+   * GET /interactions/staff/:staffId
+   */
+  getByStaff: (staffId: string, params?: PaginationParams & { date?: string }) => 
+    api.get<Interaction[]>(`/interactions/staff/${staffId}`, params),
 
-  // Start vitals recording
-  startVitals: (interactionId: string) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, { 
-      vitalsStartTime: new Date().toISOString() 
-    }),
+  /**
+   * Export training data
+   * GET /interactions/export
+   */
+  exportTrainingData: (params?: { startDate?: string; endDate?: string }) => 
+    api.get<TrainingDataExport[]>('/interactions/export', params),
 
-  // End vitals recording
-  endVitals: (interactionId: string) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, { 
-      vitalsEndTime: new Date().toISOString() 
-    }),
-
-  // Start patient interaction
-  startInteraction: (interactionId: string) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, { 
-      interactionStartTime: new Date().toISOString() 
-    }),
-
-  // End patient interaction
-  endInteraction: (interactionId: string) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, { 
-      interactionEndTime: new Date().toISOString() 
-    }),
-
-  // Complete checkout
-  checkout: (interactionId: string) => 
-    api.patch<Interaction>(`/interactions/${interactionId}`, { 
-      checkoutTime: new Date().toISOString() 
-    }),
-
-  // Get today's interactions for staff
-  getToday: (staffId?: string) => 
-    api.get<Interaction[]>('/interactions/today', { staffId }),
-
-  // Get interaction history with pagination
-  getHistory: (params?: PaginationParams & { 
-    staffId?: string; 
-    department?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => 
-    api.get<Interaction[]>('/interactions', params),
-
-  // Get ML duration prediction
+  /**
+   * Get ML duration prediction (calls ML service)
+   */
   predictDuration: (data: DurationPredictionRequest) => 
-    api.post<DurationPredictionResponse>('/interactions/predict-duration', data),
+    api.post<DurationPredictionResponse>('/ml/predict', data),
 
-  // Get prediction accuracy stats
+  /**
+   * Get prediction accuracy stats
+   */
   getPredictionStats: () => 
     api.get<{ accuracy: number; totalPredictions: number; averageError: number }>(
-      '/interactions/prediction-stats'
+      '/analytics/prediction-accuracy'
     ),
 };
 

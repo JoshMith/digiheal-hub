@@ -1,5 +1,14 @@
 import api, { setTokens, clearTokens } from './client';
-import { AuthResponse, LoginRequest, PatientRegistrationRequest, StaffRegistrationRequest,  ChangePasswordRequest, User, Patient, Staff, ApiResponse} from '@/types/api.types';
+import type { 
+  PatientRegistrationRequest, 
+  StaffRegistrationRequest, 
+  ChangePasswordRequest, 
+  User, 
+  Patient, 
+  Staff, 
+  ApiResponse,
+  ProfileUpdateRequest
+} from '@/types/api.types';
 
 // Response types for specific endpoints
 interface ProfileResponse {
@@ -68,6 +77,7 @@ interface TokenRefreshResponse {
 export const authApi = {
   /**
    * Register a new patient
+   * POST /auth/register/patient
    */
   registerPatient: async (data: PatientRegistrationRequest): Promise<ApiResponse<PatientRegistrationResponse>> => {
     const response = await api.post<PatientRegistrationResponse>('/auth/register/patient', data);
@@ -81,6 +91,7 @@ export const authApi = {
 
   /**
    * Register a new staff member
+   * POST /auth/register/staff
    */
   registerStaff: async (data: StaffRegistrationRequest): Promise<ApiResponse<StaffRegistrationResponse>> => {
     const response = await api.post<StaffRegistrationResponse>('/auth/register/staff', data);
@@ -94,8 +105,9 @@ export const authApi = {
 
   /**
    * Login (works for both patients and staff)
+   * POST /auth/login
    */
-  login: async (data: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
+  login: async (data: { email: string; password: string }): Promise<ApiResponse<LoginResponse>> => {
     const response = await api.post<LoginResponse>('/auth/login', data);
     
     if (response.success && response.data) {
@@ -107,20 +119,23 @@ export const authApi = {
 
   /**
    * Get current user profile
+   * GET /auth/me
    */
   getProfile: async (): Promise<ApiResponse<ProfileResponse>> => {
     return api.get<ProfileResponse>('/auth/me');
   },
 
   /**
-   * Update user profile
+   * Update current user profile
+   * PUT /auth/profile
    */
-  updateProfile: async (data: Partial<Patient | Staff>): Promise<ApiResponse<Patient | Staff>> => {
+  updateProfile: async (data: ProfileUpdateRequest): Promise<ApiResponse<Patient | Staff>> => {
     return api.put<Patient | Staff>('/auth/profile', data);
   },
 
   /**
    * Change password
+   * PUT /auth/change-password
    */
   changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<void>> => {
     return api.put<void>('/auth/change-password', data);
@@ -128,6 +143,7 @@ export const authApi = {
 
   /**
    * Refresh access token
+   * POST /auth/refresh-token
    */
   refreshToken: async (refreshToken: string): Promise<ApiResponse<TokenRefreshResponse>> => {
     const response = await api.post<TokenRefreshResponse>('/auth/refresh-token', { refreshToken });
@@ -141,6 +157,7 @@ export const authApi = {
 
   /**
    * Logout
+   * POST /auth/logout
    */
   logout: async (): Promise<ApiResponse<void>> => {
     try {
@@ -154,6 +171,7 @@ export const authApi = {
 
   /**
    * Deactivate account
+   * DELETE /auth/account
    */
   deactivateAccount: async (password: string): Promise<ApiResponse<void>> => {
     const response = await api.delete<void>('/auth/account', { password });
@@ -167,6 +185,7 @@ export const authApi = {
 
   /**
    * Change user role (Admin only)
+   * PUT /auth/users/:userId/role
    */
   changeUserRole: async (userId: string, newRole: 'PATIENT' | 'STAFF' | 'ADMIN'): Promise<ApiResponse<User>> => {
     return api.put<User>(`/auth/users/${userId}/role`, { newRole });

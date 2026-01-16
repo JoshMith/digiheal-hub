@@ -1,22 +1,33 @@
 import api from './client';
 import type { 
   Staff, 
-  ApiResponse, 
   PaginationParams,
   Department,
-  StaffPosition
+  StaffPosition,
+  StaffSchedule,
+  StaffStats,
+  StaffAvailability
 } from '@/types/api.types';
 
 export const staffApi = {
-  // Get current staff profile
-  getProfile: () => 
-    api.get<Staff>('/staff/me'),
+  /**
+   * Create staff profile (admin only)
+   * POST /staff
+   */
+  create: (data: Partial<Staff>) => 
+    api.post<Staff>('/staff', data),
 
-  // Get staff by ID
+  /**
+   * Get staff by ID (staff/admin only)
+   * GET /staff/:id
+   */
   getById: (staffId: string) => 
     api.get<Staff>(`/staff/${staffId}`),
 
-  // Get all staff (with filters)
+  /**
+   * Get all staff (staff/admin only)
+   * GET /staff
+   */
   getAll: (params?: PaginationParams & { 
     department?: Department; 
     position?: StaffPosition;
@@ -24,42 +35,61 @@ export const staffApi = {
   }) => 
     api.get<Staff[]>('/staff', params),
 
-  // Get staff by department
-  getByDepartment: (department: Department) => 
-    api.get<Staff[]>(`/staff/department/${department}`),
-
-  // Update staff profile
-  updateProfile: (staffId: string, data: Partial<Staff>) => 
+  /**
+   * Update staff (admin only)
+   * PUT /staff/:id
+   */
+  update: (staffId: string, data: Partial<Staff>) => 
     api.put<Staff>(`/staff/${staffId}`, data),
 
-  // Toggle availability
-  toggleAvailability: (staffId: string) => 
-    api.patch<Staff>(`/staff/${staffId}/availability`),
+  /**
+   * Get staff schedule (staff/admin only)
+   * GET /staff/:id/schedule
+   */
+  getSchedule: (staffId: string, params?: { date?: string; startDate?: string; endDate?: string }) => 
+    api.get<StaffSchedule>(`/staff/${staffId}/schedule`, params),
 
-  // Set availability status
-  setAvailability: (staffId: string, isAvailable: boolean) => 
-    api.patch<Staff>(`/staff/${staffId}/availability`, { isAvailable }),
-
-  // Get staff schedule
-  getSchedule: (staffId: string, date?: string) => 
-    api.get<unknown>(`/staff/${staffId}/schedule`, { date }),
-
-  // Get staff statistics
+  /**
+   * Get staff statistics (staff/admin only)
+   * GET /staff/:id/stats
+   */
   getStats: (staffId: string, dateRange?: { startDate: string; endDate: string }) => 
-    api.get<{
-      patientsServed: number;
-      averageInteractionTime: number;
-      appointmentsCompleted: number;
-      prescriptionsIssued: number;
-    }>(`/staff/${staffId}/stats`, dateRange),
+    api.get<StaffStats>(`/staff/${staffId}/stats`, dateRange),
 
-  // Get available staff for scheduling
-  getAvailable: (department?: Department, date?: string, time?: string) => 
-    api.get<Staff[]>('/staff/available', { department, date, time }),
+  /**
+   * Get staff availability (staff/admin only)
+   * GET /staff/:id/availability
+   */
+  getAvailability: (staffId: string) => 
+    api.get<StaffAvailability>(`/staff/${staffId}/availability`),
 
-  // Search staff
-  search: (query: string) => 
-    api.get<Staff[]>('/staff/search', { q: query }),
+  /**
+   * Update staff availability (staff/admin only)
+   * PATCH /staff/:id/availability
+   */
+  updateAvailability: (staffId: string, data: Partial<StaffAvailability>) => 
+    api.patch<StaffAvailability>(`/staff/${staffId}/availability`, data),
+
+  /**
+   * Get staff by department
+   * Convenience method
+   */
+  getByDepartment: (department: Department, params?: PaginationParams) => 
+    api.get<Staff[]>('/staff', { ...params, department }),
+
+  /**
+   * Get available staff
+   * Convenience method
+   */
+  getAvailable: (params?: { department?: Department; date?: string; time?: string }) => 
+    api.get<Staff[]>('/staff', { ...params, isActive: true }),
+
+  /**
+   * Search staff
+   * Convenience method
+   */
+  search: (query: string, params?: PaginationParams) => 
+    api.get<Staff[]>('/staff', { ...params, search: query }),
 };
 
 export default staffApi;

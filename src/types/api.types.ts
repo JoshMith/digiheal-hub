@@ -79,6 +79,18 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ProfileUpdateRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  // Staff specific
+  specialization?: string;
+  isAvailable?: boolean;
+}
+
 // ============================================
 // Patient Types
 // ============================================
@@ -113,6 +125,20 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
 
 export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
 
+export interface PatientStats {
+  totalAppointments: number;
+  completedAppointments: number;
+  upcomingAppointments: number;
+  totalPrescriptions: number;
+  activePrescriptions: number;
+}
+
+export interface MedicalHistory {
+  appointments: Appointment[];
+  prescriptions: Prescription[];
+  vitalSigns: VitalSigns[];
+}
+
 // ============================================
 // Staff Types
 // ============================================
@@ -130,6 +156,7 @@ export interface Staff {
   phone: string;
   qualifications: string[];
   isActive: boolean;
+  isAvailable: boolean;
   profileImage?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -163,6 +190,30 @@ export type StaffPosition =
   | 'SPECIALIST'
   | 'CONSULTANT'
   | 'INTERN';
+
+export interface StaffSchedule {
+  staffId: string;
+  date: string;
+  appointments: Appointment[];
+  availableSlots: string[];
+}
+
+export interface StaffStats {
+  patientsServed: number;
+  averageInteractionTime: number;
+  appointmentsCompleted: number;
+  prescriptionsIssued: number;
+}
+
+export interface StaffAvailability {
+  staffId: string;
+  isAvailable: boolean;
+  schedule?: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }[];
+}
 
 // ============================================
 // Appointment Types
@@ -227,6 +278,33 @@ export interface CreateAppointmentRequest {
   priority?: PriorityLevel;
   reason?: string;
   notes?: string;
+}
+
+export interface UpdateAppointmentRequest {
+  staffId?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  duration?: number;
+  department?: Department;
+  appointmentType?: AppointmentType;
+  priority?: PriorityLevel;
+  reason?: string;
+  notes?: string;
+}
+
+export interface TimeSlot {
+  time: string;
+  available: boolean;
+  staffId?: string;
+}
+
+export interface AppointmentStats {
+  total: number;
+  scheduled: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
+  averageDuration: number;
 }
 
 // ============================================
@@ -300,6 +378,24 @@ export interface CreatePrescriptionRequest {
   expiresAt?: string;
 }
 
+export interface UpdatePrescriptionRequest {
+  medicationName?: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  quantity?: number;
+  instructions?: string;
+  expiresAt?: string;
+}
+
+export interface PrescriptionStats {
+  total: number;
+  active: number;
+  dispensed: number;
+  expired: number;
+  cancelled: number;
+}
+
 // ============================================
 // Interaction (Time Tracking) Types
 // ============================================
@@ -331,6 +427,11 @@ export interface Interaction {
   predictedDuration?: number | null;
 
   createdAt: string;
+  
+  // Relations
+  patient?: Patient;
+  staff?: Staff;
+  appointment?: Appointment;
 }
 
 export interface StartInteractionRequest {
@@ -357,6 +458,23 @@ export type InteractionPhase =
   | 'VITALS_COMPLETE'
   | 'INTERACTION_IN_PROGRESS'
   | 'COMPLETED';
+
+export interface QueueItem {
+  interaction: Interaction;
+  patient: Patient;
+  appointment: Appointment;
+  currentPhase: InteractionPhase;
+  waitTime: number;
+  estimatedDuration: number;
+}
+
+export interface InteractionStats {
+  totalToday: number;
+  completed: number;
+  inProgress: number;
+  averageWaitTime: number;
+  averageInteractionTime: number;
+}
 
 // ============================================
 // Notification Types
@@ -388,6 +506,21 @@ export type NotificationType =
 // Analytics Types
 // ============================================
 
+export interface DashboardMetrics {
+  totalPatients: number;
+  todayPatients: number;
+  weekPatients: number;
+  monthPatients: number;
+  totalAppointments: number;
+  todayAppointments: number;
+  completedToday: number;
+  pendingToday: number;
+  averageWaitTime: number;
+  averageInteractionDuration: number;
+  appointmentCompletionRate: number;
+  noShowRate: number;
+}
+
 export interface AnalyticsSummary {
   totalPatients: number;
   todayPatients: number;
@@ -397,6 +530,30 @@ export interface AnalyticsSummary {
   averageInteractionDuration: number;
   appointmentCompletionRate: number;
   noShowRate: number;
+}
+
+export interface PatientFlowData {
+  date: string;
+  hour?: number;
+  count: number;
+  department?: Department;
+}
+
+export interface WaitTimeData {
+  date: string;
+  averageWait: number;
+  minWait: number;
+  maxWait: number;
+  department?: Department;
+}
+
+export interface DepartmentLoad {
+  department: Department;
+  currentLoad: number;
+  capacity: number;
+  utilizationRate: number;
+  averageWaitTime: number;
+  patientsWaiting: number;
 }
 
 export interface DepartmentStats {
@@ -420,8 +577,10 @@ export interface AppointmentTypeStats {
 export interface StaffPerformance {
   staffId: string;
   staffName: string;
+  department: Department;
   patientsServed: number;
   averageInteractionTime: number;
+  completionRate: number;
   rating?: number;
 }
 
@@ -429,6 +588,7 @@ export interface MLPredictionStats {
   totalPredictions: number;
   accuracyRate: number;
   averageError: number;
+  modelVersion?: string;
 }
 
 // ============================================
@@ -539,4 +699,15 @@ export const PRESCRIPTION_STATUS_DISPLAY: Record<PrescriptionStatus, string> = {
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired',
+};
+
+export const BLOOD_GROUP_DISPLAY: Record<BloodGroup, string> = {
+  'A+': 'A+',
+  'A-': 'A-',
+  'B+': 'B+',
+  'B-': 'B-',
+  'AB+': 'AB+',
+  'AB-': 'AB-',
+  'O+': 'O+',
+  'O-': 'O-',
 };
