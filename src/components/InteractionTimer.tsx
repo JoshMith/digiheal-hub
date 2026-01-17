@@ -5,18 +5,33 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   Clock, 
   Play, 
-  Pause, 
   CheckCircle, 
   Activity,
   Stethoscope,
-  ClipboardCheck
+  ClipboardCheck,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
-import type { InteractionPhase } from "@/types/api.types";
+import { useToast } from "@/hooks/use-toast";
+import {
+  useInteraction,
+  useStartVitals,
+  useEndVitals,
+  useStartConsultation,
+  useEndConsultation,
+  useCheckout,
+  useDurationPrediction
+} from "@/hooks/use-interactions";
+import type { InteractionPhase, Department, Priority, AppointmentType } from "@/types/api.types";
 
 interface InteractionTimerProps {
+  interactionId?: string;
   appointmentId: string;
   patientName: string;
-  predictedDuration?: number;
+  department?: Department;
+  priority?: Priority;
+  appointmentType?: AppointmentType;
+  symptomCount?: number;
   onPhaseChange?: (phase: InteractionPhase, timestamp: Date) => void;
   onComplete?: (totalDuration: number) => void;
   initialPhase?: InteractionPhase;
@@ -32,14 +47,40 @@ interface PhaseData {
   endTime?: Date;
 }
 
+const STORAGE_KEY_PREFIX = 'dkut_interaction_timer_';
+
 export const InteractionTimer = ({
+  interactionId: externalInteractionId,
   appointmentId,
   patientName,
-  predictedDuration,
+  department = 'GENERAL_MEDICINE',
+  priority = 'NORMAL',
+  appointmentType = 'ROUTINE_CHECKUP',
+  symptomCount = 1,
   onPhaseChange,
   onComplete,
   initialPhase = 'CHECKED_IN'
 }: InteractionTimerProps) => {
+  const { toast } = useToast();
+  
+  // API hooks
+  const { data: interactionData, isLoading: isLoadingInteraction } = useInteraction(externalInteractionId || '');
+  const startVitalsMutation = useStartVitals();
+  const endVitalsMutation = useEndVitals();
+  const startConsultationMutation = useStartConsultation();
+  const endConsultationMutation = useEndConsultation();
+  const checkoutMutation = useCheckout();
+  
+  // Get ML prediction
+  const { data: prediction } = useDurationPrediction({
+    department,
+    priority,
+    appointmentType,
+    symptomCount,
+    timeOfDay: new Date().getHours(),
+    dayOfWeek: new Date().getDay()
+  });
+
   const [currentPhase, setCurrentPhase] = useState<InteractionPhase>(initialPhase);
   const [phases, setPhases] = useState<PhaseData[]>([
     { phase: 'CHECKED_IN', label: 'Check-in', icon: <ClipboardCheck className="h-4 w-4" />, color: 'bg-blue-500', duration: 0 },
@@ -52,6 +93,76 @@ export const InteractionTimer = ({
   const [phaseStartTime, setPhaseStartTime] = useState<Date | null>(new Date());
   const [isRunning, setIsRunning] = useState(true);
   const [totalDuration, setTotalDuration] = useState(0);
+  const [interactionId, setInteractionId] = useState<string | undefined>(externalInteractionId);
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    const storageKey = `${STORAGE_KEY_PREFIX}${appointmentId}`;
+    const saved = localStorage.getItem(storageKey);
+    
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setCurrentPhase(parsed.currentPhase);
+        setPhases(parsed.phases);
+        setTotalDuration(parsed.totalDuration);
+        setInteractionId(parsed.interactionId);
+        
+        if (parsed.phaseStartTime && parsed.currentPhase !== 'COMPLETED') {
+          const savedStart = new Date(parsed.phaseStartTime);
+          setPhaseStartTime(savedStart);
+          setIsRunning(true);
+        }
+      } catch (e) {
+        console.error('Failed to restore timer state:', e);
+      }
+    }
+  }, [appointmentId]);
+
+  // Sync with backend interaction data
+  useEffect(() => {
+    if (interactionData) {
+      // Map backend phase to frontend phase
+      if (interactionData.checkoutTime) {
+        setCurrentPhase('COMPLETED');
+        setIsRunning(false);
+      } else if (interactionData.interactionStartTime) {
+        setCurrentPhase('INTERACTION_IN_PROGRESS');
+      } else if (interactionData.vitalsEndTime) {
+        setCurrentPhase('VITALS_COMPLETE');
+      } else if (interactionData.vitalsStartTime) {
+        setCurrentPhase('VITALS_IN_PROGRESS');
+      } else if (interactionData.checkInTime) {
+        setCurrentPhase('CHECKED_IN');
+      }
+      
+      // Update durations from backend
+      if (interactionData.vitalsDuration) {
+        setPhases(prev => prev.map(p => 
+          p.phase === 'VITALS_IN_PROGRESS' ? { ...p, duration: interactionData.vitalsDuration! * 60 } : p
+        ));
+      }
+      if (interactionData.interactionDuration) {
+        setPhases(prev => prev.map(p => 
+          p.phase === 'INTERACTION_IN_PROGRESS' ? { ...p, duration: interactionData.interactionDuration! * 60 } : p
+        ));
+      }
+    }
+  }, [interactionData]);
+
+  // Save state to localStorage on changes
+  useEffect(() => {
+    if (currentPhase !== 'CHECKED_IN' || totalDuration > 0) {
+      const storageKey = `${STORAGE_KEY_PREFIX}${appointmentId}`;
+      localStorage.setItem(storageKey, JSON.stringify({
+        currentPhase,
+        phases,
+        totalDuration,
+        phaseStartTime: phaseStartTime?.toISOString(),
+        interactionId
+      }));
+    }
+  }, [currentPhase, phases, totalDuration, phaseStartTime, appointmentId, interactionId]);
 
   // Timer effect
   useEffect(() => {
@@ -80,53 +191,93 @@ export const InteractionTimer = ({
     return phases.findIndex(p => p.phase === phase);
   };
 
-  const advancePhase = useCallback(() => {
+  const isLoading = startVitalsMutation.isPending || 
+    endVitalsMutation.isPending || 
+    startConsultationMutation.isPending || 
+    endConsultationMutation.isPending ||
+    checkoutMutation.isPending;
+
+  const advancePhase = useCallback(async () => {
+    if (!interactionId) {
+      toast({
+        title: "Error",
+        description: "No active interaction. Please start the interaction first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const currentIndex = getPhaseIndex(currentPhase);
     if (currentIndex < phases.length - 1) {
       const now = new Date();
       
-      // Update current phase end time and duration
-      setPhases(prev => prev.map((p, i) => {
-        if (i === currentIndex) {
-          return { ...p, endTime: now, duration: elapsedTime };
+      try {
+        // Call API based on current phase
+        switch (currentPhase) {
+          case 'CHECKED_IN':
+            await startVitalsMutation.mutateAsync(interactionId);
+            break;
+          case 'VITALS_IN_PROGRESS':
+            await endVitalsMutation.mutateAsync(interactionId);
+            break;
+          case 'VITALS_COMPLETE':
+            await startConsultationMutation.mutateAsync(interactionId);
+            break;
+          case 'INTERACTION_IN_PROGRESS':
+            await endConsultationMutation.mutateAsync(interactionId);
+            await checkoutMutation.mutateAsync(interactionId);
+            break;
         }
-        return p;
-      }));
 
-      // Set total duration
-      setTotalDuration(prev => prev + elapsedTime);
+        // Update current phase end time and duration
+        setPhases(prev => prev.map((p, i) => {
+          if (i === currentIndex) {
+            return { ...p, endTime: now, duration: elapsedTime };
+          }
+          return p;
+        }));
 
-      // Move to next phase
-      const nextPhase = phases[currentIndex + 1].phase;
-      setCurrentPhase(nextPhase);
-      setPhaseStartTime(now);
-      setElapsedTime(0);
-      
-      // Update next phase start time
-      setPhases(prev => prev.map((p, i) => {
-        if (i === currentIndex + 1) {
-          return { ...p, startTime: now };
+        // Set total duration
+        setTotalDuration(prev => prev + elapsedTime);
+
+        // Move to next phase
+        const nextPhase = phases[currentIndex + 1].phase;
+        setCurrentPhase(nextPhase);
+        setPhaseStartTime(now);
+        setElapsedTime(0);
+        
+        // Update next phase start time
+        setPhases(prev => prev.map((p, i) => {
+          if (i === currentIndex + 1) {
+            return { ...p, startTime: now };
+          }
+          return p;
+        }));
+
+        onPhaseChange?.(nextPhase, now);
+
+        // Check if completed
+        if (nextPhase === 'COMPLETED') {
+          setIsRunning(false);
+          onComplete?.(totalDuration + elapsedTime);
+          
+          // Clear localStorage
+          localStorage.removeItem(`${STORAGE_KEY_PREFIX}${appointmentId}`);
+          
+          toast({
+            title: "Consultation Complete",
+            description: `Total time: ${formatTime(totalDuration + elapsedTime)}`,
+          });
         }
-        return p;
-      }));
-
-      onPhaseChange?.(nextPhase, now);
-
-      // Check if completed
-      if (nextPhase === 'COMPLETED') {
-        setIsRunning(false);
-        onComplete?.(totalDuration + elapsedTime);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to update phase",
+          variant: "destructive"
+        });
       }
     }
-  }, [currentPhase, phases, elapsedTime, totalDuration, onPhaseChange, onComplete]);
-
-  const getNextPhaseLabel = (): string => {
-    const currentIndex = getPhaseIndex(currentPhase);
-    if (currentIndex < phases.length - 1) {
-      return phases[currentIndex + 1].label;
-    }
-    return 'Done';
-  };
+  }, [currentPhase, phases, elapsedTime, totalDuration, interactionId, appointmentId, onPhaseChange, onComplete, toast, startVitalsMutation, endVitalsMutation, startConsultationMutation, endConsultationMutation, checkoutMutation]);
 
   const getButtonLabel = (): string => {
     switch (currentPhase) {
@@ -144,6 +295,18 @@ export const InteractionTimer = ({
   };
 
   const isCompleted = currentPhase === 'COMPLETED';
+  const predictedDuration = prediction?.predictedDuration;
+
+  if (isLoadingInteraction && externalInteractionId) {
+    return (
+      <Card className="shadow-medium border-l-4 border-l-primary">
+        <CardContent className="p-4 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="ml-2">Loading interaction...</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-medium border-l-4 border-l-primary">
@@ -151,14 +314,30 @@ export const InteractionTimer = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-lg">{patientName}</h3>
-            <p className="text-sm text-muted-foreground">Appointment #{appointmentId.slice(0, 8)}</p>
+            <p className="text-sm text-muted-foreground">
+              {interactionId ? `Interaction #${interactionId.slice(0, 8)}` : `Appointment #${appointmentId.slice(0, 8)}`}
+            </p>
           </div>
-          {predictedDuration && (
-            <Badge variant="outline" className="text-xs">
-              Predicted: {predictedDuration} min
-            </Badge>
-          )}
+          <div className="flex gap-2">
+            {predictedDuration && (
+              <Badge variant="outline" className="text-xs">
+                Predicted: {predictedDuration} min
+              </Badge>
+            )}
+            {prediction?.confidence && (
+              <Badge variant="secondary" className="text-xs">
+                {Math.round(prediction.confidence * 100)}% confidence
+              </Badge>
+            )}
+          </div>
         </div>
+
+        {!interactionId && (
+          <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-warning" />
+            <p className="text-sm text-warning">Waiting for interaction to start...</p>
+          </div>
+        )}
 
         {/* Phase Progress */}
         <div className="flex items-center gap-2 mb-4">
@@ -210,6 +389,28 @@ export const InteractionTimer = ({
               )}
             </div>
           </div>
+          
+          {/* Progress bar comparing to predicted */}
+          {predictedDuration && !isCompleted && (
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Progress</span>
+                <span>{Math.round(((totalDuration + elapsedTime) / 60 / predictedDuration) * 100)}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all ${
+                    (totalDuration + elapsedTime) / 60 > predictedDuration 
+                      ? 'bg-warning' 
+                      : 'bg-accent'
+                  }`}
+                  style={{ 
+                    width: `${Math.min(100, ((totalDuration + elapsedTime) / 60 / predictedDuration) * 100)}%` 
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Phase Summary */}
@@ -228,17 +429,20 @@ export const InteractionTimer = ({
         </div>
 
         {/* Action Button */}
-        {!isCompleted && (
+        {!isCompleted && interactionId && (
           <Button 
             className="w-full bg-accent hover:bg-accent-hover text-accent-foreground"
             onClick={advancePhase}
+            disabled={isLoading}
           >
-            {currentPhase === 'CHECKED_IN' || currentPhase === 'VITALS_COMPLETE' ? (
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : currentPhase === 'CHECKED_IN' || currentPhase === 'VITALS_COMPLETE' ? (
               <Play className="h-4 w-4 mr-2" />
             ) : (
               <CheckCircle className="h-4 w-4 mr-2" />
             )}
-            {getButtonLabel()}
+            {isLoading ? 'Processing...' : getButtonLabel()}
           </Button>
         )}
 
