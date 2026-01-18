@@ -83,14 +83,14 @@ const PatientDashboard = () => {
     emergencyContact: patientProfile?.emergencyContactPhone || "Not provided"
   };
 
-  // Get upcoming appointments
-  const upcomingAppointments = (appointmentsData?.appointments || [])
+  // Get upcoming appointments (appointmentsData is array directly)
+  const upcomingAppointments = (appointmentsData || [])
     .filter((apt: Appointment) => 
-      apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED'
+      apt.status === 'SCHEDULED' || apt.status === 'WAITING' || apt.status === 'CHECKED_IN'
     );
 
-  // Get active medications
-  const activeMedications = (prescriptionsData?.prescriptions || [])
+  // Get active medications (prescriptionsData is array directly)
+  const activeMedications = (prescriptionsData || [])
     .filter((rx: Prescription) => rx.status === 'ACTIVE' || rx.status === 'DISPENSED');
 
   // Get latest vital signs
@@ -471,7 +471,7 @@ const PatientDashboard = () => {
                             {formatTime(apt.appointmentTime)} • {apt.department}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {apt.type || apt.appointmentType || 'General Consultation'}
+                            {apt.appointmentType || 'General Consultation'}
                           </p>
                         </div>
                       ))
@@ -495,7 +495,7 @@ const PatientDashboard = () => {
                     <CardDescription>
                       {isLoadingAppointments 
                         ? 'Loading...' 
-                        : `${appointmentsData?.appointments?.length || 0} total appointments`
+                        : `${appointmentsData?.length || 0} total appointments`
                       }
                     </CardDescription>
                   </div>
@@ -520,7 +520,7 @@ const PatientDashboard = () => {
                         <Skeleton className="h-6 w-20" />
                       </div>
                     ))
-                  ) : !appointmentsData?.appointments?.length ? (
+                  ) : !appointmentsData?.length ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg mb-2">No appointments yet</p>
@@ -530,7 +530,7 @@ const PatientDashboard = () => {
                       </Link>
                     </div>
                   ) : (
-                    appointmentsData.appointments.map((apt: Appointment) => (
+                    appointmentsData.map((apt: Appointment) => (
                       <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 bg-primary/10 rounded-lg flex flex-col items-center justify-center">
@@ -545,7 +545,7 @@ const PatientDashboard = () => {
                             <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
                             <p className="text-sm text-muted-foreground">{apt.department}</p>
                             <p className="text-xs text-muted-foreground">
-                              {apt.type || apt.appointmentType || 'Consultation'}
+                              {apt.appointmentType || 'Consultation'}
                             </p>
                           </div>
                         </div>
@@ -589,14 +589,14 @@ const PatientDashboard = () => {
                         <Skeleton className="h-3 w-24" />
                       </div>
                     ))
-                  ) : !prescriptionsData?.prescriptions?.length ? (
+                  ) : !prescriptionsData?.length ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Pill className="h-16 w-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg mb-2">No prescriptions</p>
                       <p className="text-sm">Your prescriptions will appear here after a consultation</p>
                     </div>
                   ) : (
-                    prescriptionsData.prescriptions.map((rx: Prescription) => (
+                    prescriptionsData.map((rx: Prescription) => (
                       <div key={rx.id} className="p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-start justify-between">
                           <div>

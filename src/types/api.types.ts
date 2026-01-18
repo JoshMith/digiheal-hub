@@ -131,7 +131,11 @@ export interface PatientStats {
   upcomingAppointments: number;
   totalPrescriptions: number;
   activePrescriptions: number;
+  lastVisit?: string | null;
 }
+
+// Alias for Priority (same as PriorityLevel)
+export type Priority = PriorityLevel;
 
 export interface MedicalHistory {
   appointments: Appointment[];
@@ -304,6 +308,8 @@ export interface AppointmentStats {
   completed: number;
   cancelled: number;
   noShow: number;
+  pending: number;
+  inProgress: number;
   averageDuration: number;
 }
 
@@ -460,9 +466,25 @@ export type InteractionPhase =
   | 'COMPLETED';
 
 export interface QueueItem {
+  // Nested objects from API
   interaction: Interaction;
   patient: Patient;
   appointment: Appointment;
+  
+  // Flattened fields for UI convenience
+  interactionId: string;
+  appointmentId: string;
+  patientId: string;
+  patientName: string;
+  department: Department;
+  appointmentType: AppointmentType;
+  priority: PriorityLevel;
+  status: InteractionPhase;
+  queuePosition: number;
+  checkInTime: string;
+  predictedDuration?: number | null;
+  
+  // Computed fields
   currentPhase: InteractionPhase;
   waitTime: number;
   estimatedDuration: number;
