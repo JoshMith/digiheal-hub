@@ -22,14 +22,14 @@ import {
   useCheckout,
   useDurationPrediction
 } from "@/hooks/use-interactions";
-import type { InteractionPhase, Department, Priority, AppointmentType } from "@/types/api.types";
+import type { InteractionPhase, Department, PriorityLevel, AppointmentType } from "@/types/api.types";
 
 interface InteractionTimerProps {
   interactionId?: string;
   appointmentId: string;
   patientName: string;
   department?: Department;
-  priority?: Priority;
+  priority?: PriorityLevel;
   appointmentType?: AppointmentType;
   symptomCount?: number;
   onPhaseChange?: (phase: InteractionPhase, timestamp: Date) => void;

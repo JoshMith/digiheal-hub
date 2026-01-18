@@ -526,7 +526,7 @@ const StaffPortal = () => {
                                   {getStatusBadge(apt.status)}
                                 </div>
                                 <div className="flex items-center justify-between mt-2">
-                                  <Badge variant="outline">{apt.type || apt.appointmentType}</Badge>
+                                  <Badge variant="outline">{apt.appointmentType}</Badge>
                                   <span className="text-xs text-muted-foreground">
                                     {apt.duration ? `${apt.duration} min` : `est. ${apt.duration || 20} min`}
                                   </span>
@@ -577,13 +577,13 @@ const StaffPortal = () => {
                             <Skeleton className="h-8 w-16" />
                           </div>
                         ))
-                      ) : !patientsData?.patients?.length ? (
+                      ) : !patientsData?.length ? (
                         <div className="text-center py-8 text-muted-foreground">
                           <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                           <p>{searchTerm ? 'No patients found' : 'Search for patients'}</p>
                         </div>
                       ) : (
-                        patientsData.patients.map((patient) => (
+                        patientsData.map((patient) => (
                           <div 
                             key={patient.id} 
                             className="flex items-center justify-between p-3 mb-2 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
