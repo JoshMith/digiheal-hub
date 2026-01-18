@@ -2,7 +2,9 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/authContext';
+import { InteractionProvider } from '@/context/interactionContext';
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
+import { FloatingTimer } from '@/components/FloatingTimer';
 import { Toaster } from '@/components/ui/toaster';
 import { Loader2 } from 'lucide-react';
 
@@ -52,116 +54,119 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/features" element={<Features />} />
+        <InteractionProvider>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/features" element={<Features />} />
 
-              {/* Auth routes - redirect if already authenticated */}
-              <Route
-                path="/auth"
-                element={
-                  <PublicRoute redirectAuthenticated>
-                    <Auth />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/staff-auth"
-                element={
-                  <PublicRoute redirectAuthenticated>
-                    <StaffAuth />
-                  </PublicRoute>
-                }
-              />
+                {/* Auth routes - redirect if already authenticated */}
+                <Route
+                  path="/auth"
+                  element={
+                    <PublicRoute redirectAuthenticated>
+                      <Auth />
+                    </PublicRoute>
+                  }
+                />
+                <Route
+                  path="/staff-auth"
+                  element={
+                    <PublicRoute redirectAuthenticated>
+                      <StaffAuth />
+                    </PublicRoute>
+                  }
+                />
 
-              {/* Patient protected routes */}
-              <Route
-                path="/patient-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['PATIENT']}>
-                    <PatientDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/edit-profile"
-                element={
-                  <ProtectedRoute allowedRoles={['PATIENT']}>
-                    <EditProfile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/book-appointment"
-                element={
-                  <ProtectedRoute allowedRoles={['PATIENT']}>
-                    <BookAppointment />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Patient protected routes */}
+                <Route
+                  path="/patient-dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <PatientDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/edit-profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <EditProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/book-appointment"
+                  element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <BookAppointment />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Staff protected routes */}
-              <Route
-                path="/staff-portal"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <StaffPortal />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/staff-settings"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <StaffSettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patient/:patientId"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <PatientDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/new-patient"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <NewPatient />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                    <AnalyticsDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin-portal"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <AdminPortal />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Staff protected routes */}
+                <Route
+                  path="/staff-portal"
+                  element={
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                      <StaffPortal />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/staff-settings"
+                  element={
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                      <StaffSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/patient/:patientId"
+                  element={
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                      <PatientDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/new-patient"
+                  element={
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                      <NewPatient />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/analytics"
+                  element={
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                      <AnalyticsDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin-portal"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                      <AdminPortal />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <Toaster />
-        </BrowserRouter>
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <FloatingTimer />
+            <Toaster />
+          </BrowserRouter>
+        </InteractionProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
