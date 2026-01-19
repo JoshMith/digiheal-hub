@@ -1,29 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/authContext";
+import { usePatient, useUpdatePatient } from "@/hooks/use-patients";
+import type { Patient } from "@/types/api.types";
 
 const EditProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
+  // Fetch patient data
+  const { data: patient, isLoading: isLoadingPatient } = usePatient(user?.id || '');
+  const updatePatientMutation = useUpdatePatient();
+
   const [formData, setFormData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "(555) 123-4567",
-    dateOfBirth: "1990-05-15",
-    address: "123 Main St, City, State 12345",
-    emergencyContact: "Jane Doe - (555) 987-6543",
-    medicalConditions: "Hypertension, Diabetes Type 2",
-    allergies: "Penicillin, Peanuts",
-    insurance: "BlueCross BlueShield - Policy #BC123456"
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    emergencyContact: "",
+    medicalConditions: "",
+    allergies: "",
+    insurance: ""
   });
+
+  // Populate form when patient data loads
+  useEffect(() => {
+    if (patient) {
+      setFormData({
+        firstName: patient.firstName || "",
+        lastName: patient.lastName || "",
+        email: patient.email || "",
+        phone: patient.phone || "",
+        dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : "",
+        address: patient.address || "",
+        emergencyContact: patient.emergencyContactName 
+          ? `${patient.emergencyContactName} - ${patient.emergencyContactPhone || ''}`
+          : "",
+        medicalConditions: patient.chronicConditions?.join(', ') || "",
+        allergies: patient.allergies?.join(', ') || "",
+        insurance: patient.insuranceProvider 
+          ? `${patient.insuranceProvider} - Policy #${patient.insurancePolicyNumber || ''}`
+          : ""
+      });
+    }
+  }, [patient]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -33,13 +64,85 @@ const EditProfile = () => {
     }));
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been successfully updated.",
-    });
-    navigate("/patient-dashboard");
+  const handleSave = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Parse emergency contact
+    const emergencyParts = formData.emergencyContact.split(' - ');
+    const emergencyName = emergencyParts[0] || '';
+    const emergencyPhone = emergencyParts[1] || '';
+
+    // Parse insurance
+    const insuranceParts = formData.insurance.split(' - Policy #');
+    const insuranceProvider = insuranceParts[0] || '';
+    const insurancePolicyNumber = insuranceParts[1] || '';
+
+    const updateData: Partial<Patient> = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      dateOfBirth: formData.dateOfBirth,
+      address: formData.address,
+      emergencyContactName: emergencyName,
+      emergencyContactPhone: emergencyPhone,
+      chronicConditions: formData.medicalConditions.split(',').map(s => s.trim()).filter(Boolean),
+      allergies: formData.allergies.split(',').map(s => s.trim()).filter(Boolean),
+      insuranceProvider,
+      insurancePolicyNumber,
+    };
+
+    try {
+      await updatePatientMutation.mutateAsync({ patientId: user.id, data: updateData });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      navigate("/patient-dashboard");
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (isLoadingPatient) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <div className="grid gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -163,7 +266,7 @@ const EditProfile = () => {
                   name="medicalConditions"
                   value={formData.medicalConditions}
                   onChange={handleInputChange}
-                  placeholder="List any ongoing medical conditions"
+                  placeholder="List any ongoing medical conditions (comma separated)"
                   rows={3}
                 />
               </div>
@@ -174,7 +277,7 @@ const EditProfile = () => {
                   name="allergies"
                   value={formData.allergies}
                   onChange={handleInputChange}
-                  placeholder="List any known allergies"
+                  placeholder="List any known allergies (comma separated)"
                   rows={2}
                 />
               </div>
@@ -195,7 +298,7 @@ const EditProfile = () => {
                   name="insurance"
                   value={formData.insurance}
                   onChange={handleInputChange}
-                  placeholder="Insurance provider and policy number"
+                  placeholder="Insurance provider - Policy #policy number"
                 />
               </div>
             </CardContent>
@@ -206,8 +309,16 @@ const EditProfile = () => {
             <Button variant="outline" onClick={() => navigate("/patient-dashboard")}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
+            <Button 
+              onClick={handleSave} 
+              className="flex items-center gap-2"
+              disabled={updatePatientMutation.isPending}
+            >
+              {updatePatientMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
               Save Changes
             </Button>
           </div>

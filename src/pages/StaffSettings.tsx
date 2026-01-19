@@ -1,29 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Shield, Bell, User, Building } from "lucide-react";
+import { ArrowLeft, Save, Shield, Bell, User, Building, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/authContext";
+import { useStaff, useUpdateStaff } from "@/hooks/use-staff";
+import { notificationApi } from "@/api";
+import type { Staff, Department, StaffPosition, NotificationType } from "@/types/api.types";
 
 const StaffSettings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const { data: staffData, isLoading: isLoadingStaff } = useStaff(user?.id || '');
+  const updateStaffMutation = useUpdateStaff();
   
   const [profileData, setProfileData] = useState({
-    firstName: "Dr. Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@dkut.ac.ke",
-    phone: "+254 700 123 456",
-    department: "General Medicine",
-    position: "Senior Doctor",
-    licenseNumber: "MD12345",
-    specialization: "Internal Medicine"
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "" as Department | "",
+    position: "" as StaffPosition | "",
+    licenseNumber: "",
+    specialization: ""
   });
 
   const [systemSettings, setSystemSettings] = useState({
@@ -34,8 +42,59 @@ const StaffSettings = () => {
     systemMaintenance: false
   });
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load staff data into form
+  useEffect(() => {
+    if (staffData) {
+      setProfileData({
+        firstName: staffData.firstName || "",
+        lastName: staffData.lastName || "",
+        email: staffData.email || "",
+        phone: staffData.phone || "",
+        department: staffData.department || "",
+        position: staffData.position || "",
+        licenseNumber: staffData.licenseNumber || "",
+        specialization: staffData.specialization || ""
+      });
+    }
+  }, [staffData]);
+
+  // Load notification preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!user?.id) return;
+      setIsLoadingPreferences(true);
+      try {
+        const prefs = await notificationApi.getPreferences();
+        if (prefs) {
+          setSystemSettings(prev => ({
+            ...prev,
+            emailNotifications: prefs.APPOINTMENT_REMINDER ?? true,
+            smsNotifications: prefs.APPOINTMENT_CANCELLED ?? false,
+            appointmentReminders: prefs.APPOINTMENT_REMINDER ?? true,
+            emergencyAlerts: prefs.QUEUE_UPDATE ?? true,
+          }));
+        }
+      } catch (error) {
+        // Use defaults on error
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+    loadPreferences();
+  }, [user?.id]);
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setProfileData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
     setProfileData(prev => ({
       ...prev,
       [name]: value
@@ -49,12 +108,62 @@ const StaffSettings = () => {
     }));
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Settings Updated",
-      description: "Your settings have been successfully saved.",
-    });
+  const handleSave = async () => {
+    if (!user?.id) return;
+    setIsSaving(true);
+
+    try {
+      // Update staff profile
+      const updateData: Partial<Staff> = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        email: profileData.email,
+        phone: profileData.phone,
+        department: profileData.department as Department,
+        position: profileData.position as StaffPosition,
+        licenseNumber: profileData.licenseNumber,
+        specialization: profileData.specialization,
+      };
+
+      await updateStaffMutation.mutateAsync({ staffId: user.id, data: updateData });
+
+      // Update notification preferences
+      const notifPrefs: Partial<Record<NotificationType, boolean>> = {
+        APPOINTMENT_REMINDER: systemSettings.appointmentReminders,
+        APPOINTMENT_CANCELLED: systemSettings.smsNotifications,
+        QUEUE_UPDATE: systemSettings.emergencyAlerts,
+      };
+      await notificationApi.updatePreferences(notifPrefs);
+
+      toast({
+        title: "Settings Updated",
+        description: "Your settings have been successfully saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoadingStaff) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-8 w-40" />
+          </div>
+          <Skeleton className="h-12 w-full mb-6" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -135,31 +244,39 @@ const StaffSettings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="department">Department</Label>
-                    <Select value={profileData.department}>
+                    <Select 
+                      value={profileData.department} 
+                      onValueChange={(v) => handleSelectChange('department', v)}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="General Medicine">General Medicine</SelectItem>
-                        <SelectItem value="Cardiology">Cardiology</SelectItem>
-                        <SelectItem value="Pediatrics">Pediatrics</SelectItem>
-                        <SelectItem value="Surgery">Surgery</SelectItem>
-                        <SelectItem value="Emergency">Emergency</SelectItem>
+                        <SelectItem value="GENERAL_MEDICINE">General Medicine</SelectItem>
+                        <SelectItem value="CARDIOLOGY">Cardiology</SelectItem>
+                        <SelectItem value="PEDIATRICS">Pediatrics</SelectItem>
+                        <SelectItem value="SURGERY">Surgery</SelectItem>
+                        <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                        <SelectItem value="MENTAL_HEALTH">Mental Health</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label htmlFor="position">Position</Label>
-                    <Select value={profileData.position}>
+                    <Select 
+                      value={profileData.position}
+                      onValueChange={(v) => handleSelectChange('position', v)}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select position" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Senior Doctor">Senior Doctor</SelectItem>
-                        <SelectItem value="Junior Doctor">Junior Doctor</SelectItem>
-                        <SelectItem value="Consultant">Consultant</SelectItem>
-                        <SelectItem value="Nurse">Nurse</SelectItem>
-                        <SelectItem value="Administrator">Administrator</SelectItem>
+                        <SelectItem value="SENIOR_DOCTOR">Senior Doctor</SelectItem>
+                        <SelectItem value="JUNIOR_DOCTOR">Junior Doctor</SelectItem>
+                        <SelectItem value="CONSULTANT">Consultant</SelectItem>
+                        <SelectItem value="NURSE">Nurse</SelectItem>
+                        <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
+                        <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -199,46 +316,56 @@ const StaffSettings = () => {
                 <CardDescription>Manage how you receive notifications</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                {isLoadingPreferences ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
                   </div>
-                  <Switch
-                    checked={systemSettings.emailNotifications}
-                    onCheckedChange={(checked) => handleSwitchChange('emailNotifications', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.smsNotifications}
-                    onCheckedChange={(checked) => handleSwitchChange('smsNotifications', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Appointment Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Get reminders for upcoming appointments</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.appointmentReminders}
-                    onCheckedChange={(checked) => handleSwitchChange('appointmentReminders', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Emergency Alerts</Label>
-                    <p className="text-sm text-muted-foreground">Receive urgent emergency notifications</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.emergencyAlerts}
-                    onCheckedChange={(checked) => handleSwitchChange('emergencyAlerts', checked)}
-                  />
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Email Notifications</Label>
+                        <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.emailNotifications}
+                        onCheckedChange={(checked) => handleSwitchChange('emailNotifications', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">SMS Notifications</Label>
+                        <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.smsNotifications}
+                        onCheckedChange={(checked) => handleSwitchChange('smsNotifications', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Appointment Reminders</Label>
+                        <p className="text-sm text-muted-foreground">Get reminders for upcoming appointments</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.appointmentReminders}
+                        onCheckedChange={(checked) => handleSwitchChange('appointmentReminders', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Emergency Alerts</Label>
+                        <p className="text-sm text-muted-foreground">Receive urgent emergency notifications</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.emergencyAlerts}
+                        onCheckedChange={(checked) => handleSwitchChange('emergencyAlerts', checked)}
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -340,8 +467,16 @@ const StaffSettings = () => {
           <Button variant="outline" onClick={() => navigate("/staff-portal")}>
             Cancel
           </Button>
-          <Button onClick={handleSave} className="flex items-center gap-2">
-            <Save className="h-4 w-4" />
+          <Button 
+            onClick={handleSave} 
+            className="flex items-center gap-2"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Save Settings
           </Button>
         </div>
