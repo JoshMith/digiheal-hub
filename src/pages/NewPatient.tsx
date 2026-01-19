@@ -9,25 +9,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useCreatePatient } from "@/hooks/use-patients";
 import { 
   ArrowLeft, 
   UserPlus, 
   User, 
-  Phone, 
-  Mail, 
-  MapPin,
   Shield,
   Heart,
   FileText,
   Save,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from "lucide-react";
+import type { Patient, BloodGroup, Gender } from "@/types/api.types";
 
 const NewPatient = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("personal");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const createPatientMutation = useCreatePatient();
 
   const [formData, setFormData] = useState({
     // Personal Information
@@ -35,7 +37,7 @@ const NewPatient = () => {
     lastName: "",
     studentId: "",
     dateOfBirth: "",
-    gender: "",
+    gender: "" as Gender | "",
     nationality: "",
     phone: "",
     email: "",
@@ -48,7 +50,7 @@ const NewPatient = () => {
     emergencyEmail: "",
     
     // Medical Information
-    bloodGroup: "",
+    bloodGroup: "" as BloodGroup | "",
     allergies: "",
     chronicConditions: "",
     currentMedications: "",
@@ -66,7 +68,7 @@ const NewPatient = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validate required fields
     const requiredFields = ['firstName', 'lastName', 'studentId', 'dateOfBirth', 'gender', 'phone', 'email'];
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
@@ -80,14 +82,42 @@ const NewPatient = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    const patientData: Partial<Patient> = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      studentId: formData.studentId,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender as Gender,
+      nationality: formData.nationality,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      emergencyContactName: formData.emergencyName,
+      emergencyContactRelationship: formData.emergencyRelationship,
+      emergencyContactPhone: formData.emergencyPhone,
+      emergencyContactEmail: formData.emergencyEmail,
+      bloodGroup: formData.bloodGroup as BloodGroup || undefined,
+      allergies: formData.allergies.split(',').map(s => s.trim()).filter(Boolean),
+      chronicConditions: formData.chronicConditions.split(',').map(s => s.trim()).filter(Boolean),
+      currentMedications: formData.currentMedications.split(',').map(s => s.trim()).filter(Boolean),
+      insuranceProvider: formData.insuranceProvider,
+      insurancePolicyNumber: formData.policyNumber,
+    };
+
+    try {
+      await createPatientMutation.mutateAsync(patientData);
       setIsSubmitted(true);
       toast({
         title: "Patient Registered Successfully!",
         description: `Patient ${formData.firstName} ${formData.lastName} has been added to the system.`,
       });
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "Failed to register patient. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isSubmitted) {
@@ -212,15 +242,15 @@ const NewPatient = () => {
                         onValueChange={(value) => handleInputChange('gender', value)}
                       >
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="male" id="male" />
+                          <RadioGroupItem value="MALE" id="male" />
                           <Label htmlFor="male">Male</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="female" id="female" />
+                          <RadioGroupItem value="FEMALE" id="female" />
                           <Label htmlFor="female">Female</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="other" id="other" />
+                          <RadioGroupItem value="OTHER" id="other" />
                           <Label htmlFor="other">Other</Label>
                         </div>
                       </RadioGroup>
@@ -353,14 +383,14 @@ const NewPatient = () => {
                           <SelectValue placeholder="Select blood group" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="A+">A+</SelectItem>
-                          <SelectItem value="A-">A-</SelectItem>
-                          <SelectItem value="B+">B+</SelectItem>
-                          <SelectItem value="B-">B-</SelectItem>
-                          <SelectItem value="AB+">AB+</SelectItem>
-                          <SelectItem value="AB-">AB-</SelectItem>
-                          <SelectItem value="O+">O+</SelectItem>
-                          <SelectItem value="O-">O-</SelectItem>
+                          <SelectItem value="A_POSITIVE">A+</SelectItem>
+                          <SelectItem value="A_NEGATIVE">A-</SelectItem>
+                          <SelectItem value="B_POSITIVE">B+</SelectItem>
+                          <SelectItem value="B_NEGATIVE">B-</SelectItem>
+                          <SelectItem value="AB_POSITIVE">AB+</SelectItem>
+                          <SelectItem value="AB_NEGATIVE">AB-</SelectItem>
+                          <SelectItem value="O_POSITIVE">O+</SelectItem>
+                          <SelectItem value="O_NEGATIVE">O-</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -381,7 +411,7 @@ const NewPatient = () => {
                       id="allergies"
                       value={formData.allergies}
                       onChange={(e) => handleInputChange('allergies', e.target.value)}
-                      placeholder="List any known allergies (food, medication, environmental)"
+                      placeholder="List any known allergies (comma separated)"
                       rows={3}
                     />
                   </div>
@@ -392,7 +422,7 @@ const NewPatient = () => {
                       id="chronicConditions"
                       value={formData.chronicConditions}
                       onChange={(e) => handleInputChange('chronicConditions', e.target.value)}
-                      placeholder="List any chronic medical conditions"
+                      placeholder="List any chronic medical conditions (comma separated)"
                       rows={3}
                     />
                   </div>
@@ -403,7 +433,7 @@ const NewPatient = () => {
                       id="currentMedications"
                       value={formData.currentMedications}
                       onChange={(e) => handleInputChange('currentMedications', e.target.value)}
-                      placeholder="List current medications and dosages"
+                      placeholder="List current medications and dosages (comma separated)"
                       rows={3}
                     />
                   </div>
@@ -414,7 +444,7 @@ const NewPatient = () => {
                       id="previousSurgeries"
                       value={formData.previousSurgeries}
                       onChange={(e) => handleInputChange('previousSurgeries', e.target.value)}
-                      placeholder="List any previous surgeries or major medical procedures"
+                      placeholder="List any previous surgeries with dates"
                       rows={3}
                     />
                   </div>
@@ -448,22 +478,31 @@ const NewPatient = () => {
                       id="notes"
                       value={formData.notes}
                       onChange={(e) => handleInputChange('notes', e.target.value)}
-                      placeholder="Any additional information or special notes"
+                      placeholder="Any additional information about the patient..."
                       rows={4}
                     />
                   </div>
-
-                  <div className="flex justify-end gap-4 pt-6">
-                    <Button variant="outline" onClick={() => navigate('/staff-portal')}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSubmit} className="bg-accent hover:bg-accent-hover text-accent-foreground">
-                      <Save className="mr-2 h-4 w-4" />
-                      Register Patient
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => navigate('/staff-portal')}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSubmit} 
+                  className="bg-accent hover:bg-accent-hover text-accent-foreground"
+                  disabled={createPatientMutation.isPending}
+                >
+                  {createPatientMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Register Patient
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

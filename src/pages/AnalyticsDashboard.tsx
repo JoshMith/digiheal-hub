@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -34,75 +35,122 @@ import {
   AreaChart,
   Area
 } from "recharts";
+import {
+  useDashboardMetrics,
+  usePatientFlowData,
+  useWaitTimeData,
+  useDepartmentLoad,
+  useStaffPerformance,
+  usePredictionAccuracy,
+  useTodayStats,
+} from "@/hooks/use-analytics";
+import type { Department } from "@/types/api.types";
 
 const AnalyticsDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("week");
 
-  // Mock data for charts
-  const patientFlowData = [
-    { time: "8AM", patients: 12 },
-    { time: "9AM", patients: 18 },
-    { time: "10AM", patients: 25 },
-    { time: "11AM", patients: 30 },
-    { time: "12PM", patients: 22 },
-    { time: "1PM", patients: 15 },
-    { time: "2PM", patients: 28 },
-    { time: "3PM", patients: 24 },
-    { time: "4PM", patients: 18 },
-  ];
-
-  const departmentData = [
-    { name: "General", patients: 145, avgWait: 12 },
-    { name: "Emergency", patients: 45, avgWait: 5 },
-    { name: "Dental", patients: 62, avgWait: 18 },
-    { name: "Mental Health", patients: 38, avgWait: 15 },
-    { name: "Pharmacy", patients: 210, avgWait: 8 },
-  ];
-
-  const appointmentTypeData = [
-    { name: "Walk-in", value: 35, color: "hsl(var(--primary))" },
-    { name: "Scheduled", value: 40, color: "hsl(var(--accent))" },
-    { name: "Follow-up", value: 15, color: "hsl(var(--warning))" },
-    { name: "Emergency", value: 10, color: "hsl(var(--destructive))" },
-  ];
-
-  const waitTimesTrend = [
-    { date: "Mon", avgWait: 14, predicted: 15 },
-    { date: "Tue", avgWait: 12, predicted: 13 },
-    { date: "Wed", avgWait: 18, predicted: 16 },
-    { date: "Thu", avgWait: 15, predicted: 14 },
-    { date: "Fri", avgWait: 20, predicted: 18 },
-    { date: "Sat", avgWait: 10, predicted: 11 },
-    { date: "Sun", avgWait: 8, predicted: 9 },
-  ];
-
-  const staffPerformance = [
-    { name: "Dr. Johnson", patients: 45, avgTime: 18, rating: 4.8 },
-    { name: "Dr. Mwangi", patients: 42, avgTime: 22, rating: 4.6 },
-    { name: "Dr. Ochieng", patients: 38, avgTime: 15, rating: 4.9 },
-    { name: "Nurse Akinyi", patients: 65, avgTime: 8, rating: 4.7 },
-    { name: "Nurse Wanjiku", patients: 58, avgTime: 10, rating: 4.5 },
-  ];
-
-  const predictionAccuracy = [
-    { week: "W1", accuracy: 78 },
-    { week: "W2", accuracy: 82 },
-    { week: "W3", accuracy: 85 },
-    { week: "W4", accuracy: 88 },
-    { week: "W5", accuracy: 91 },
-    { week: "W6", accuracy: 89 },
-  ];
-
-  // Summary stats
-  const summaryStats = {
-    totalPatients: 1247,
-    todayPatients: 89,
-    avgWaitTime: 14,
-    completionRate: 94.2,
-    noShowRate: 5.8,
-    predictionAccuracy: 89,
+  // Calculate date range params
+  const getDateRangeParams = () => {
+    const endDate = new Date().toISOString();
+    const startDate = new Date();
+    switch (dateRange) {
+      case "today":
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "week":
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case "month":
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+      case "quarter":
+        startDate.setMonth(startDate.getMonth() - 3);
+        break;
+    }
+    return { startDate: startDate.toISOString(), endDate };
   };
+
+  const dateRangeParams = getDateRangeParams();
+
+  // API hooks
+  const { data: dashboardMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(dateRangeParams);
+  const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({ 
+    ...dateRangeParams, 
+    granularity: 'hourly' 
+  });
+  const { data: waitTimeData, isLoading: isLoadingWaitTime, refetch: refetchWaitTime } = useWaitTimeData({ 
+    ...dateRangeParams, 
+    granularity: 'daily' 
+  });
+  const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad(dateRangeParams);
+  const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance(dateRangeParams);
+  const { data: predictionAccuracy, isLoading: isLoadingPrediction, refetch: refetchPrediction } = usePredictionAccuracy(dateRangeParams);
+  const { data: todayStats, isLoading: isLoadingToday, refetch: refetchToday } = useTodayStats();
+
+  const handleRefresh = () => {
+    refetchMetrics();
+    refetchFlow();
+    refetchWaitTime();
+    refetchDept();
+    refetchStaff();
+    refetchPrediction();
+    refetchToday();
+  };
+
+  // Format patient flow data for chart
+  const formattedFlowData = patientFlowData?.map((item: { hour?: string; time?: string; count?: number; patients?: number }) => ({
+    time: item.hour || item.time || '',
+    patients: item.count || item.patients || 0,
+  })) || [];
+
+  // Format department data for chart
+  const formattedDeptData = departmentLoad?.map((item: { department?: Department; name?: string; currentLoad?: number; patients?: number; avgWaitTime?: number; avgWait?: number }) => ({
+    name: item.department?.replace(/_/g, ' ') || item.name || '',
+    patients: item.currentLoad || item.patients || 0,
+    avgWait: item.avgWaitTime || item.avgWait || 0,
+  })) || [];
+
+  // Format wait times data for chart
+  const formattedWaitData = waitTimeData?.map((item: { date?: string; actualWaitTime?: number; avgWait?: number; predictedWaitTime?: number; predicted?: number }) => ({
+    date: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
+    avgWait: item.actualWaitTime || item.avgWait || 0,
+    predicted: item.predictedWaitTime || item.predicted || 0,
+  })) || [];
+
+  // Format staff performance data for table
+  const formattedStaffData = staffPerformance?.map((item: { staffName?: string; name?: string; patientsServed?: number; patients?: number; avgConsultationTime?: number; avgTime?: number; rating?: number }) => ({
+    name: item.staffName || item.name || '',
+    patients: item.patientsServed || item.patients || 0,
+    avgTime: item.avgConsultationTime || item.avgTime || 0,
+    rating: item.rating || 0,
+  })) || [];
+
+  // Format prediction accuracy data for chart
+  const formattedPredictionData = predictionAccuracy?.map((item: { week?: string; period?: string; accuracy?: number }) => ({
+    week: item.week || item.period || '',
+    accuracy: item.accuracy || 0,
+  })) || [];
+
+  // Appointment type data (from dashboard metrics or defaults)
+  const appointmentTypeData = [
+    { name: "Walk-in", value: dashboardMetrics?.walkInCount || 35, color: "hsl(var(--primary))" },
+    { name: "Scheduled", value: dashboardMetrics?.scheduledCount || 40, color: "hsl(var(--accent))" },
+    { name: "Follow-up", value: dashboardMetrics?.followUpCount || 15, color: "hsl(var(--warning))" },
+    { name: "Emergency", value: dashboardMetrics?.emergencyCount || 10, color: "hsl(var(--destructive))" },
+  ];
+
+  // Summary stats from API or fallbacks
+  const summaryStats = {
+    totalPatients: dashboardMetrics?.totalPatients || todayStats?.totalPatients || 0,
+    todayPatients: todayStats?.todayPatients || dashboardMetrics?.todayPatients || 0,
+    avgWaitTime: todayStats?.avgWaitTime || dashboardMetrics?.avgWaitTime || 0,
+    completionRate: dashboardMetrics?.completionRate || 0,
+    noShowRate: dashboardMetrics?.noShowRate || 0,
+    predictionAccuracy: dashboardMetrics?.predictionAccuracy || formattedPredictionData[formattedPredictionData.length - 1]?.accuracy || 0,
+  };
+
+  const isLoading = isLoadingMetrics || isLoadingToday;
 
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
@@ -130,7 +178,7 @@ const AnalyticsDashboard = () => {
                 <SelectItem value="quarter">This Quarter</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -150,7 +198,11 @@ const AnalyticsDashboard = () => {
                   <Users className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.totalPatients}</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-16" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{summaryStats.totalPatients}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Total Patients</p>
                 </div>
               </div>
@@ -164,7 +216,11 @@ const AnalyticsDashboard = () => {
                   <Calendar className="h-5 w-5 text-accent-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.todayPatients}</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{summaryStats.todayPatients}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Today</p>
                 </div>
               </div>
@@ -178,7 +234,11 @@ const AnalyticsDashboard = () => {
                   <Clock className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.avgWaitTime}m</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-14" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{Math.round(summaryStats.avgWaitTime)}m</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Avg Wait</p>
                 </div>
               </div>
@@ -192,7 +252,11 @@ const AnalyticsDashboard = () => {
                   <Target className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.completionRate}%</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-14" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{summaryStats.completionRate.toFixed(1)}%</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Completion</p>
                 </div>
               </div>
@@ -206,7 +270,11 @@ const AnalyticsDashboard = () => {
                   <Activity className="h-5 w-5 text-destructive" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.noShowRate}%</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-14" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{summaryStats.noShowRate.toFixed(1)}%</p>
+                  )}
                   <p className="text-xs text-muted-foreground">No-Show</p>
                 </div>
               </div>
@@ -220,7 +288,11 @@ const AnalyticsDashboard = () => {
                   <Brain className="h-5 w-5 text-accent-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{summaryStats.predictionAccuracy}%</p>
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-14" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{Math.round(summaryStats.predictionAccuracy)}%</p>
+                  )}
                   <p className="text-xs text-muted-foreground">ML Accuracy</p>
                 </div>
               </div>
@@ -249,27 +321,37 @@ const AnalyticsDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={patientFlowData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="time" className="text-xs" />
-                        <YAxis className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }} 
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="patients" 
-                          stroke="hsl(var(--primary))" 
-                          fill="hsl(var(--primary) / 0.2)" 
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {isLoadingFlow ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                    ) : formattedFlowData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No data available
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={formattedFlowData}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="time" className="text-xs" />
+                          <YAxis className="text-xs" />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }} 
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="patients" 
+                            stroke="hsl(var(--primary))" 
+                            fill="hsl(var(--primary) / 0.2)" 
+                            strokeWidth={2}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -323,38 +405,48 @@ const AnalyticsDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={waitTimesTrend}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="date" className="text-xs" />
-                        <YAxis className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }} 
-                        />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="avgWait" 
-                          name="Actual Wait Time"
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2}
-                          dot={{ fill: 'hsl(var(--primary))' }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="predicted" 
-                          name="ML Predicted"
-                          stroke="hsl(var(--accent))" 
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          dot={{ fill: 'hsl(var(--accent))' }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {isLoadingWaitTime ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                    ) : formattedWaitData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No data available
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={formattedWaitData}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="date" className="text-xs" />
+                          <YAxis className="text-xs" />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }} 
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="avgWait" 
+                            name="Actual Wait Time"
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2}
+                            dot={{ fill: 'hsl(var(--primary))' }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="predicted" 
+                            name="ML Predicted"
+                            stroke="hsl(var(--accent))" 
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={{ fill: 'hsl(var(--accent))' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -372,29 +464,39 @@ const AnalyticsDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={departmentData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" className="text-xs" />
-                      <YAxis dataKey="name" type="category" width={100} className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }} 
-                      />
-                      <Legend />
-                      <Bar dataKey="patients" name="Patients" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {isLoadingDept ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                  ) : formattedDeptData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No department data available
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={formattedDeptData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" className="text-xs" />
+                        <YAxis dataKey="name" type="category" width={100} className="text-xs" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }} 
+                        />
+                        <Legend />
+                        <Bar dataKey="patients" name="Patients" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {departmentData.map((dept) => (
+                  {formattedDeptData.map((dept: { name: string; avgWait: number }) => (
                     <div key={dept.name} className="p-4 bg-muted/50 rounded-lg">
                       <p className="font-semibold">{dept.name}</p>
-                      <p className="text-sm text-muted-foreground">Avg Wait: {dept.avgWait} min</p>
+                      <p className="text-sm text-muted-foreground">Avg Wait: {Math.round(dept.avgWait)} min</p>
                     </div>
                   ))}
                 </div>
@@ -412,59 +514,92 @@ const AnalyticsDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">Staff Member</th>
-                        <th className="text-left py-3 px-4">Patients Served</th>
-                        <th className="text-left py-3 px-4">Avg Time (min)</th>
-                        <th className="text-left py-3 px-4">Rating</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {staffPerformance.map((staff, index) => (
-                        <tr key={index} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 font-medium">{staff.name}</td>
-                          <td className="py-3 px-4">{staff.patients}</td>
-                          <td className="py-3 px-4">{staff.avgTime}</td>
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent">
-                              ⭐ {staff.rating}
-                            </span>
-                          </td>
+                {isLoadingStaff ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : formattedStaffData.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No staff performance data available
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4">Staff Member</th>
+                          <th className="text-left py-3 px-4">Patients Served</th>
+                          <th className="text-left py-3 px-4">Avg Time (min)</th>
+                          <th className="text-left py-3 px-4">Rating</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {formattedStaffData.map((staff: { name: string; patients: number; avgTime: number; rating: number }, index: number) => (
+                          <tr key={index} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4 font-medium">{staff.name}</td>
+                            <td className="py-3 px-4">{staff.patients}</td>
+                            <td className="py-3 px-4">{Math.round(staff.avgTime)}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <span className="mr-2">{staff.rating?.toFixed(1) || '--'}</span>
+                                {staff.rating > 0 && (
+                                  <div className="flex">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <span 
+                                        key={i} 
+                                        className={`text-xs ${i < Math.round(staff.rating) ? 'text-warning' : 'text-muted'}`}
+                                      >
+                                        ★
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* ML Predictions Tab */}
           <TabsContent value="predictions" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-medium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-primary" />
-                    Prediction Accuracy Over Time
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
+            <Card className="shadow-medium">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  ML Prediction Accuracy Over Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  {isLoadingPrediction ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                  ) : formattedPredictionData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No prediction data available
+                    </div>
+                  ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={predictionAccuracy}>
+                      <LineChart data={formattedPredictionData}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="week" className="text-xs" />
-                        <YAxis domain={[70, 100]} className="text-xs" />
+                        <YAxis domain={[0, 100]} className="text-xs" />
                         <Tooltip 
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
                           }} 
+                          formatter={(value: number) => [`${value}%`, 'Accuracy']}
                         />
                         <Line 
                           type="monotone" 
@@ -475,37 +610,19 @@ const AnalyticsDashboard = () => {
                         />
                       </LineChart>
                     </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+                  )}
+                </div>
 
-              <Card className="shadow-medium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-primary" />
-                    Model Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Predictions Made</p>
-                    <p className="text-3xl font-bold text-primary">2,847</p>
-                  </div>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Average Prediction Error</p>
-                    <p className="text-3xl font-bold text-primary">±2.3 min</p>
-                  </div>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Model Last Trained</p>
-                    <p className="text-lg font-semibold text-primary">3 days ago</p>
-                  </div>
-                  <Button className="w-full bg-accent hover:bg-accent-hover text-accent-foreground">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retrain Model
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                {/* Prediction insights */}
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-semibold mb-2">ML Model Insights</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Our machine learning model continuously learns from patient flow patterns to improve wait time predictions.
+                    Current accuracy: <span className="font-semibold text-primary">{Math.round(summaryStats.predictionAccuracy)}%</span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
