@@ -1,6 +1,6 @@
 import { ApiResponse } from '@/types/api.types';
 
-const API_BASE_URL = 'https://miffiest-tom-pyramidally.ngrok-free.dev';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000' || 'https://miffiest-tom-pyramidally.ngrok-free.dev';
 
 // Token management
 const TOKEN_KEY = 'dkut_auth_token';
