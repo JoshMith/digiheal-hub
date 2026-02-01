@@ -2,7 +2,6 @@ import api from './client';
 import type { 
   Notification, 
   ApiResponse, 
-  PaginationParams,
   NotificationType
 } from '@/types/api.types';
 

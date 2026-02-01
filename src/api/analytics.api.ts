@@ -2,10 +2,9 @@ import api from './client';
 import type { 
   DashboardMetrics,
   PatientFlowData,
-  WaitTimeData,
-  DepartmentLoad,
-  StaffPerformance,
-  MLPredictionStats,
+  DepartmentLoadData,
+  StaffPerformanceData,
+  PredictionAccuracyData,
   Department
 } from '@/types/api.types';
 
@@ -40,14 +39,14 @@ export const analyticsApi = {
     department?: Department;
     granularity?: 'hourly' | 'daily';
   }) => 
-    api.get<WaitTimeData[]>('/analytics/wait-times', params),
+    api.get<{ hour?: string; date?: string; avgWaitTime: number }[]>('/analytics/wait-times', params),
 
   /**
    * Get department utilization/load
    * GET /analytics/department-load
    */
   getDepartmentLoad: (params?: AnalyticsDateRange) => 
-    api.get<DepartmentLoad[]>('/analytics/department-load', params),
+    api.get<DepartmentLoadData[]>('/analytics/department-load', params),
 
   /**
    * Get staff performance metrics
@@ -57,14 +56,14 @@ export const analyticsApi = {
     department?: Department;
     staffId?: string;
   }) => 
-    api.get<StaffPerformance[]>('/analytics/staff-performance', params),
+    api.get<StaffPerformanceData[]>('/analytics/staff-performance', params),
 
   /**
    * Get ML prediction accuracy
    * GET /analytics/prediction-accuracy
    */
   getPredictionAccuracy: (params?: AnalyticsDateRange) => 
-    api.get<MLPredictionStats>('/analytics/prediction-accuracy', params),
+    api.get<PredictionAccuracyData>('/analytics/prediction-accuracy', params),
 
   /**
    * Get today's quick stats (convenience method)

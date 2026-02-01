@@ -1,5 +1,5 @@
 // API Module Exports
-export { default as api, ApiError, getToken, setTokens, clearTokens, getRefreshToken } from './client';
+export { default as api, ApiError, tokenManager } from './client';
 export { default as authApi } from './auth.api';
 export { default as patientApi } from './patient.api';
 export { default as appointmentApi } from './appointment.api';
@@ -12,7 +12,6 @@ export { default as notificationApi } from './notification.api';
 // Re-export types for convenience
 export type { AnalyticsDateRange } from './analytics.api';
 export type { 
-  DurationPredictionRequest, 
-  DurationPredictionResponse,
-  TrainingDataExport 
+  StartInteractionRequest, 
+  UpdateInteractionPhaseRequest
 } from './interaction.api';

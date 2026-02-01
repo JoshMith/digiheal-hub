@@ -1,195 +1,146 @@
-import api, { setTokens, clearTokens } from './client';
-import type { 
-  PatientRegistrationRequest, 
-  StaffRegistrationRequest, 
-  ChangePasswordRequest, 
-  User, 
-  Patient, 
-  Staff, 
-  ApiResponse,
-  ProfileUpdateRequest
-} from '@/types/api.types';
+// ============================================
+// DKUT Medical Center - Authentication API Service
+// ============================================
 
-// Response types for specific endpoints
-interface ProfileResponse {
-  id: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastLogin?: string | null;
-  patient?: Patient | null;
-  staff?: Staff | null;
-  profile?: Patient | Staff | null;
-}
+import { post, get, put, tokenManager } from './client';
+import type {
+  LoginRequest,
+  LoginResponse,
+  PatientRegistrationRequest,
+  StaffRegistrationRequest,
+  ChangePasswordRequest,
+  Patient,
+  Staff,
+  User,
+} from '../types/api.types';
 
-interface PatientRegistrationResponse {
-  user: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  patient: {
-    id: string;
-    studentId: string;
-    firstName: string;
-    lastName: string;
-  };
-  token: string;
-  refreshToken: string;
-}
+// ============================================
+// AUTH ENDPOINTS
+// ============================================
 
-interface StaffRegistrationResponse {
-  user: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  staff: {
-    id: string;
-    staffId: string;
-    firstName: string;
-    lastName: string;
-    department: string;
-    position: string;
-  };
-  token: string;
-  refreshToken: string;
-}
+/**
+ * Login user (patient or staff)
+ */
+export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
+  const response = await post<LoginResponse>('/auth/login', credentials);
+  // Store tokens
+  tokenManager.setTokens(response.token, response.refreshToken);
+  return response;
+};
 
-interface LoginResponse {
-  user: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  profile: Patient | Staff | null;
-  token: string;
-  refreshToken: string;
-}
+/**
+ * Register new patient
+ */
+export const registerPatient = async (data: PatientRegistrationRequest): Promise<LoginResponse> => {
+  const response = await post<LoginResponse>('/auth/register/patient', data);
+  // Store tokens
+  tokenManager.setTokens(response.token, response.refreshToken);
+  return response;
+};
 
-interface TokenRefreshResponse {
-  token: string;
-  refreshToken: string;
-}
+/**
+ * Register new staff member
+ */
+export const registerStaff = async (data: StaffRegistrationRequest): Promise<LoginResponse> => {
+  const response = await post<LoginResponse>('/auth/register/staff', data);
+  // Store tokens
+  tokenManager.setTokens(response.token, response.refreshToken);
+  return response;
+};
+
+/**
+ * Logout user
+ */
+export const logout = async (): Promise<void> => {
+  try {
+    await post('/auth/logout');
+  } finally {
+    tokenManager.clearTokens();
+  }
+};
+
+/**
+ * Get current user profile
+ */
+export const getProfile = async (): Promise<{ user: User; profile: Patient | Staff | null }> => {
+  return get<{ user: User; profile: Patient | Staff | null }>('/auth/profile');
+};
+
+/**
+ * Update patient profile
+ */
+export const updatePatientProfile = async (data: Partial<Patient>): Promise<Patient> => {
+  return put<Patient>('/auth/profile/patient', data);
+};
+
+/**
+ * Update staff profile
+ */
+export const updateStaffProfile = async (data: Partial<Staff>): Promise<Staff> => {
+  return put<Staff>('/auth/profile/staff', data);
+};
+
+/**
+ * Change password
+ */
+export const changePassword = async (data: ChangePasswordRequest): Promise<void> => {
+  await post('/auth/change-password', data);
+};
+
+/**
+ * Request password reset
+ */
+export const requestPasswordReset = async (email: string): Promise<void> => {
+  await post('/auth/forgot-password', { email });
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+  await post('/auth/reset-password', { token, newPassword });
+};
+
+/**
+ * Refresh access token
+ */
+export const refreshToken = async (): Promise<{ token: string; refreshToken: string }> => {
+  const currentRefreshToken = tokenManager.getRefreshToken();
+  if (!currentRefreshToken) {
+    throw new Error('No refresh token available');
+  }
+  const response = await post<{ token: string; refreshToken: string }>(
+    '/auth/refresh-token',
+    { refreshToken: currentRefreshToken }
+  );
+  tokenManager.setTokens(response.token, response.refreshToken);
+  return response;
+};
+
+/**
+ * Check if user is authenticated
+ */
+export const isAuthenticated = (): boolean => {
+  return tokenManager.hasTokens();
+};
+
+// ============================================
+// EXPORT API OBJECT
+// ============================================
 
 export const authApi = {
-  /**
-   * Register a new patient
-   * POST /auth/register/patient
-   */
-  registerPatient: async (data: PatientRegistrationRequest): Promise<ApiResponse<PatientRegistrationResponse>> => {
-    const response = await api.post<PatientRegistrationResponse>('/auth/register/patient', data);
-    
-    if (response.success && response.data) {
-      setTokens(response.data.token, response.data.refreshToken);
-    }
-    
-    return response;
-  },
-
-  /**
-   * Register a new staff member
-   * POST /auth/register/staff
-   */
-  registerStaff: async (data: StaffRegistrationRequest): Promise<ApiResponse<StaffRegistrationResponse>> => {
-    const response = await api.post<StaffRegistrationResponse>('/auth/register/staff', data);
-    
-    if (response.success && response.data) {
-      setTokens(response.data.token, response.data.refreshToken);
-    }
-    
-    return response;
-  },
-
-  /**
-   * Login (works for both patients and staff)
-   * POST /auth/login
-   */
-  login: async (data: { email: string; password: string }): Promise<ApiResponse<LoginResponse>> => {
-    const response = await api.post<LoginResponse>('/auth/login', data);
-    
-    if (response.success && response.data) {
-      setTokens(response.data.token, response.data.refreshToken);
-    }
-    
-    return response;
-  },
-
-  /**
-   * Get current user profile
-   * GET /auth/me
-   */
-  getProfile: async (): Promise<ApiResponse<ProfileResponse>> => {
-    return api.get<ProfileResponse>('/auth/me');
-  },
-
-  /**
-   * Update current user profile
-   * PUT /auth/profile
-   */
-  updateProfile: async (data: ProfileUpdateRequest): Promise<ApiResponse<Patient | Staff>> => {
-    return api.put<Patient | Staff>('/auth/profile', data);
-  },
-
-  /**
-   * Change password
-   * PUT /auth/change-password
-   */
-  changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<void>> => {
-    return api.put<void>('/auth/change-password', data);
-  },
-
-  /**
-   * Refresh access token
-   * POST /auth/refresh-token
-   */
-  refreshToken: async (refreshToken: string): Promise<ApiResponse<TokenRefreshResponse>> => {
-    const response = await api.post<TokenRefreshResponse>('/auth/refresh-token', { refreshToken });
-    
-    if (response.success && response.data) {
-      setTokens(response.data.token, response.data.refreshToken);
-    }
-    
-    return response;
-  },
-
-  /**
-   * Logout
-   * POST /auth/logout
-   */
-  logout: async (): Promise<ApiResponse<void>> => {
-    try {
-      await api.post<void>('/auth/logout');
-    } catch {
-      // Even if the API call fails, clear local tokens
-    }
-    clearTokens();
-    return { success: true, message: 'Logged out successfully' };
-  },
-
-  /**
-   * Deactivate account
-   * DELETE /auth/account
-   */
-  deactivateAccount: async (password: string): Promise<ApiResponse<void>> => {
-    const response = await api.delete<void>('/auth/account', { password });
-    
-    if (response.success) {
-      clearTokens();
-    }
-    
-    return response;
-  },
-
-  /**
-   * Change user role (Admin only)
-   * PUT /auth/users/:userId/role
-   */
-  changeUserRole: async (userId: string, newRole: 'PATIENT' | 'STAFF' | 'ADMIN'): Promise<ApiResponse<User>> => {
-    return api.put<User>(`/auth/users/${userId}/role`, { newRole });
-  },
+  login,
+  registerPatient,
+  registerStaff,
+  logout,
+  getProfile,
+  updatePatientProfile,
+  updateStaffProfile,
+  changePassword,
+  requestPasswordReset,
+  resetPassword,
+  refreshToken,
+  isAuthenticated,
 };
 
 export default authApi;
