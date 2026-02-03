@@ -13,6 +13,10 @@ import type {
   MLPredictionResponse,
 } from "@/types/api.types";
 
+// Cache durations to prevent rate limiting
+const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
 // Query keys
 export const appointmentKeys = {
   all: ["appointments"] as const,
@@ -39,6 +43,9 @@ export function useAppointment(appointmentId: string) {
     queryKey: appointmentKeys.detail(appointmentId),
     queryFn: () => appointmentApi.getAppointment(appointmentId),
     enabled: !!appointmentId,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -55,6 +62,9 @@ export function usePatientAppointments(
         ...params,
       }),
     enabled: !!patientId,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -71,6 +81,9 @@ export function useStaffAppointments(
         ...params,
       }),
     enabled: !!staffId,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -84,6 +97,11 @@ export function useTodayAppointments(department?: string) {
             department: department as Department,
           })
         : appointmentApi.getTodayAppointments(),
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -98,6 +116,9 @@ export function useAvailableSlots(params: {
     queryKey: appointmentKeys.slots(params),
     queryFn: () => appointmentApi.getAvailableSlots(params),
     enabled: !!params.date && !!params.department,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -110,6 +131,11 @@ export function useAppointmentStats(params?: {
   return useQuery({
     queryKey: appointmentKeys.stats(params),
     queryFn: () => appointmentApi.getAppointmentStats(params),
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 

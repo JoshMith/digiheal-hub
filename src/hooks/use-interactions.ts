@@ -7,6 +7,10 @@ import type {
   PaginationParams 
 } from '@/types/api.types';
 
+// Cache durations to prevent rate limiting
+const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
 // Query keys
 export const interactionKeys = {
   all: ['interactions'] as const,
@@ -38,7 +42,12 @@ export function useInteractionQueue(params?: { department?: Department; staffId?
   return useQuery({
     queryKey: interactionKeys.queue(params),
     queryFn: () => interactionApi.getQueue(params),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchInterval: 60000, // Refresh every 60 seconds (was 30)
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -51,6 +60,11 @@ export function useInteractionStats(params?: {
   return useQuery({
     queryKey: interactionKeys.stats(params),
     queryFn: () => interactionApi.getInteractionStats(params),
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 

@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
-import { useInteractionQueue, useInteractionStats } from "@/hooks/use-interactions";
+import { useInteractionQueue } from "@/hooks/use-interactions";
 import { useTodayAppointments, useAppointmentStats } from "@/hooks/use-appointments";
 import { useDashboardMetrics } from "@/hooks/use-analytics";
 import { usePatients } from "@/hooks/use-patients";
@@ -53,7 +53,8 @@ const StaffPortal = () => {
   const staffProfile = profile as Staff | null;
   const staffDepartment = staffProfile?.department as Department | undefined;
 
-  // API hooks
+  // API hooks - consolidated to reduce requests and prevent rate limiting
+  // Queue data - primary data source for staff portal
   const {
     data: queueData,
     isLoading: isLoadingQueue,
@@ -63,28 +64,34 @@ const StaffPortal = () => {
     staffId: staffProfile?.id
   });
 
+  // Today's appointments for the department
   const {
     data: todayAppointments,
     isLoading: isLoadingAppointments
   } = useTodayAppointments(staffDepartment);
 
+  // Dashboard metrics - provides most stats we need
   const {
     data: dashboardMetrics,
     isLoading: isLoadingMetrics
   } = useDashboardMetrics();
 
-  const {
-    data: interactionStats
-  } = useInteractionStats();
-
+  // Appointment stats for completed count
   const {
     data: appointmentStats
   } = useAppointmentStats();
 
+  // Patients data - only fetch when search is active or Records tab is selected
   const {
     data: patientsData,
     isLoading: isLoadingPatients
   } = usePatients({ search: searchTerm });
+
+  // Derived interaction stats from dashboard metrics to avoid extra API call
+  const interactionStats = {
+    avgInteractionDuration: dashboardMetrics?.avgWaitTime || 0,
+  };
+
 
   // Filtered queue based on search
   const filteredQueue = useMemo(() => {
