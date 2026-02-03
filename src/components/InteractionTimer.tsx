@@ -20,9 +20,10 @@ import {
   useStartConsultation,
   useEndConsultation,
   useCheckout,
-  useDurationPrediction
 } from "@/hooks/use-interactions";
+import { usePredictDuration } from "@/hooks/use-appointments";
 import type { InteractionPhase, Department, PriorityLevel, AppointmentType } from "@/types/api.types";
+import { Department as DeptEnum, PriorityLevel as PriorityEnum, AppointmentType as ApptTypeEnum } from "@/types/api.types";
 
 interface InteractionTimerProps {
   interactionId?: string;
@@ -53,9 +54,9 @@ export const InteractionTimer = ({
   interactionId: externalInteractionId,
   appointmentId,
   patientName,
-  department = 'GENERAL_MEDICINE',
-  priority = 'NORMAL',
-  appointmentType = 'ROUTINE_CHECKUP',
+  department = DeptEnum.GENERAL_MEDICINE,
+  priority = PriorityEnum.NORMAL,
+  appointmentType = ApptTypeEnum.ROUTINE_CHECKUP,
   symptomCount = 1,
   onPhaseChange,
   onComplete,
@@ -71,11 +72,11 @@ export const InteractionTimer = ({
   const endConsultationMutation = useEndConsultation();
   const checkoutMutation = useCheckout();
   
-  // Get ML prediction
-  const { data: prediction } = useDurationPrediction({
-    department,
-    priority,
-    appointmentType,
+  // Get ML prediction using the appointment hook
+  const { data: prediction } = usePredictDuration({
+    department: department as DeptEnum,
+    priority: priority as PriorityEnum,
+    appointmentType: appointmentType as ApptTypeEnum,
     symptomCount,
     timeOfDay: new Date().getHours(),
     dayOfWeek: new Date().getDay()
