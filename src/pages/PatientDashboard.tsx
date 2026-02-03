@@ -7,14 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Calendar, 
-  Pill, 
-  Bell, 
-  FileText, 
-  Activity, 
-  Heart, 
-  Clock, 
+import {
+  Calendar,
+  Pill,
+  Bell,
+  FileText,
+  Activity,
+  Heart,
+  Clock,
   User,
   Download,
   Plus,
@@ -35,36 +35,40 @@ import { useAuth } from "@/context/authContext";
 import { usePatientAppointments } from "@/hooks/use-appointments";
 import { usePatientVitalSigns, usePatientStats } from "@/hooks/use-patients";
 import { usePatientPrescriptions } from "@/hooks/use-prescriptions";
-import type { Patient, Appointment, Prescription, VitalSigns } from "@/types/api.types";
+import { type Patient, type Appointment, type Prescription, type VitalSigns, AppointmentStatus } from "@/types/api.types";
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  
+
   // Cast profile to Patient type
   const patientProfile = profile as Patient | null;
   const patientId = patientProfile?.id || user?.id || '';
-  
+
   // API hooks
-  const { 
-    data: appointmentsData, 
-    isLoading: isLoadingAppointments 
+  const {
+    data: appointmentsData,
+    isLoading: isLoadingAppointments,
+    error: appointmentsError
   } = usePatientAppointments(patientId);
-  
-  const { 
-    data: vitalSignsData, 
-    isLoading: isLoadingVitals 
+
+  const {
+    data: vitalSignsData,
+    isLoading: isLoadingVitals,
+    error: vitalsError
   } = usePatientVitalSigns(patientId);
-  
-  const { 
-    data: prescriptionsData, 
-    isLoading: isLoadingPrescriptions 
+
+  const {
+    data: prescriptionsData,
+    isLoading: isLoadingPrescriptions,
+    error: prescriptionsError
   } = usePatientPrescriptions(patientId);
-  
-  const { 
-    data: statsData, 
-    isLoading: isLoadingStats 
+
+  const {
+    data: statsData,
+    isLoading: isLoadingStats,
+    error: statsError
   } = usePatientStats(patientId);
 
   // Patient data with profile fallback
@@ -77,24 +81,70 @@ const PatientDashboard = () => {
     lastVisit: statsData?.lastVisit || "No visits yet",
     address: "DKUT Campus",
     bloodGroup: patientProfile?.bloodGroup || "Unknown",
-    age: patientProfile?.dateOfBirth 
+    age: patientProfile?.dateOfBirth
       ? Math.floor((Date.now() - new Date(patientProfile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       : null,
     emergencyContact: patientProfile?.emergencyContactPhone || "Not provided"
   };
 
-  // Get upcoming appointments (appointmentsData is array directly)
-  const upcomingAppointments = (appointmentsData || [])
-    .filter((apt: Appointment) => 
-      apt.status === 'SCHEDULED' || apt.status === 'WAITING' || apt.status === 'CHECKED_IN'
+  // Safely get appointments array
+  const getAppointmentsArray = () => {
+    if (!appointmentsData) return [];
+    if (Array.isArray(appointmentsData)) return appointmentsData;
+    if (typeof appointmentsData === 'object' && appointmentsData !== null) {
+      // Check if it's an ApiResponse with data array
+      if ('data' in appointmentsData && Array.isArray(appointmentsData.data)) {
+        return appointmentsData.data;
+      }
+      // Check if it's a PaginatedResponse
+      if ('data' in appointmentsData && Array.isArray((appointmentsData as any).data)) {
+        return (appointmentsData as any).data;
+      }
+    }
+    return [];
+  };
+
+  const appointmentsArray = getAppointmentsArray();
+
+  // Get upcoming appointments
+  const upcomingAppointments = appointmentsArray
+    .filter((apt: Appointment) =>
+      apt.status === AppointmentStatus.SCHEDULED ||
+      apt.status === AppointmentStatus.CHECKED_IN
     );
 
-  // Get active medications (prescriptionsData is array directly)
-  const activeMedications = (prescriptionsData || [])
+  // Safely get prescriptions array
+  const getPrescriptionsArray = () => {
+    if (!prescriptionsData) return [];
+    if (Array.isArray(prescriptionsData)) return prescriptionsData;
+    if (typeof prescriptionsData === 'object' && prescriptionsData !== null) {
+      if ('data' in prescriptionsData && Array.isArray(prescriptionsData.data)) {
+        return prescriptionsData.data;
+      }
+    }
+    return [];
+  };
+
+  const prescriptionsArray = getPrescriptionsArray();
+
+  // Get active medications
+  const activeMedications = prescriptionsArray
     .filter((rx: Prescription) => rx.status === 'ACTIVE' || rx.status === 'DISPENSED');
 
   // Get latest vital signs
-  const latestVitals = vitalSignsData?.[0] as VitalSigns | undefined;
+  const getVitalSignsArray = () => {
+    if (!vitalSignsData) return [];
+    if (Array.isArray(vitalSignsData)) return vitalSignsData;
+    if (typeof vitalSignsData === 'object' && vitalSignsData !== null) {
+      if ('data' in vitalSignsData && Array.isArray(vitalSignsData.data)) {
+        return vitalSignsData.data;
+      }
+    }
+    return [];
+  };
+
+  const vitalSignsArray = getVitalSignsArray();
+  const latestVitals = vitalSignsArray[0] as VitalSigns | undefined;
 
   // Mock notifications (would come from notification API)
   const notifications = [
@@ -128,25 +178,39 @@ const PatientDashboard = () => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return "Invalid Date";
+    }
   };
 
   const formatTime = (timeString?: string) => {
     if (!timeString) return "";
-    // Handle both time strings and full datetime
-    if (timeString.includes('T')) {
-      return new Date(timeString).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
+    try {
+      // Handle both time strings and full datetime
+      if (timeString.includes('T')) {
+        return new Date(timeString).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+      return timeString;
+    } catch (error) {
+      return "";
     }
-    return timeString;
   };
+
+  // Handle API errors gracefully
+  const hasApiError = appointmentsError || vitalsError || prescriptionsError || statsError;
+  if (hasApiError) {
+    console.error("API Errors:", { appointmentsError, vitalsError, prescriptionsError, statsError });
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
@@ -334,7 +398,7 @@ const PatientDashboard = () => {
                         Vital Signs
                       </CardTitle>
                       <CardDescription>
-                        {latestVitals 
+                        {latestVitals
                           ? `Last recorded: ${formatDate(latestVitals.recordedAt)}`
                           : 'No vitals recorded yet'
                         }
@@ -471,7 +535,7 @@ const PatientDashboard = () => {
                             {formatTime(apt.appointmentTime)} • {apt.department}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {apt.appointmentType || 'General Consultation'}
+                            {apt.type || 'General Consultation'}
                           </p>
                         </div>
                       ))
@@ -493,9 +557,9 @@ const PatientDashboard = () => {
                       Your Appointments
                     </CardTitle>
                     <CardDescription>
-                      {isLoadingAppointments 
-                        ? 'Loading...' 
-                        : `${appointmentsData?.length || 0} total appointments`
+                      {isLoadingAppointments
+                        ? 'Loading...'
+                        : `${appointmentsArray.length || 0} total appointments`
                       }
                     </CardDescription>
                   </div>
@@ -520,7 +584,7 @@ const PatientDashboard = () => {
                         <Skeleton className="h-6 w-20" />
                       </div>
                     ))
-                  ) : !appointmentsData?.length ? (
+                  ) : !appointmentsArray.length ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg mb-2">No appointments yet</p>
@@ -530,7 +594,7 @@ const PatientDashboard = () => {
                       </Link>
                     </div>
                   ) : (
-                    appointmentsData.map((apt: Appointment) => (
+                    appointmentsArray.map((apt: Appointment) => (
                       <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 bg-primary/10 rounded-lg flex flex-col items-center justify-center">
@@ -545,14 +609,14 @@ const PatientDashboard = () => {
                             <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
                             <p className="text-sm text-muted-foreground">{apt.department}</p>
                             <p className="text-xs text-muted-foreground">
-                              {apt.appointmentType || 'Consultation'}
+                              {apt.type || 'Consultation'}
                             </p>
                           </div>
                         </div>
                         <Badge variant={
                           apt.status === 'COMPLETED' ? 'default' :
-                          apt.status === 'CANCELLED' ? 'destructive' :
-                          'outline'
+                            apt.status === 'CANCELLED' ? 'destructive' :
+                              'outline'
                         }>
                           {apt.status}
                         </Badge>
@@ -573,8 +637,8 @@ const PatientDashboard = () => {
                   Your Medications
                 </CardTitle>
                 <CardDescription>
-                  {isLoadingPrescriptions 
-                    ? 'Loading...' 
+                  {isLoadingPrescriptions
+                    ? 'Loading...'
                     : `${activeMedications.length} active prescriptions`
                   }
                 </CardDescription>
@@ -589,14 +653,14 @@ const PatientDashboard = () => {
                         <Skeleton className="h-3 w-24" />
                       </div>
                     ))
-                  ) : !prescriptionsData?.length ? (
+                  ) : !prescriptionsArray.length ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Pill className="h-16 w-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg mb-2">No prescriptions</p>
                       <p className="text-sm">Your prescriptions will appear here after a consultation</p>
                     </div>
                   ) : (
-                    prescriptionsData.map((rx: Prescription) => (
+                    prescriptionsArray.map((rx: Prescription) => (
                       <div key={rx.id} className="p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-start justify-between">
                           <div>
@@ -615,9 +679,9 @@ const PatientDashboard = () => {
                           </div>
                           <Badge variant={
                             rx.status === 'ACTIVE' ? 'default' :
-                            rx.status === 'DISPENSED' ? 'secondary' :
-                            rx.status === 'COMPLETED' ? 'outline' :
-                            'destructive'
+                              rx.status === 'DISPENSED' ? 'secondary' :
+                                rx.status === 'COMPLETED' ? 'outline' :
+                                  'destructive'
                           }>
                             {rx.status}
                           </Badge>
@@ -674,11 +738,10 @@ const PatientDashboard = () => {
                     </div>
                   ) : (
                     notifications.map((notif) => (
-                      <div 
-                        key={notif.id} 
-                        className={`flex items-start gap-3 p-4 mb-2 rounded-lg border transition-colors ${
-                          !notif.read ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/50'
-                        }`}
+                      <div
+                        key={notif.id}
+                        className={`flex items-start gap-3 p-4 mb-2 rounded-lg border transition-colors ${!notif.read ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/50'
+                          }`}
                       >
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           {getNotificationIcon(notif.type)}

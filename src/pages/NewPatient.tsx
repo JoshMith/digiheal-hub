@@ -53,12 +53,10 @@ const NewPatient = () => {
     bloodGroup: "" as BloodGroup | "",
     allergies: "",
     chronicConditions: "",
-    currentMedications: "",
     previousSurgeries: "",
     
     // Insurance Information
     insuranceProvider: "",
-    policyNumber: "",
     
     // Additional Information
     notes: ""
@@ -88,20 +86,14 @@ const NewPatient = () => {
       studentId: formData.studentId,
       dateOfBirth: formData.dateOfBirth,
       gender: formData.gender as Gender,
-      nationality: formData.nationality,
       phone: formData.phone,
-      email: formData.email,
       address: formData.address,
       emergencyContactName: formData.emergencyName,
-      emergencyContactRelationship: formData.emergencyRelationship,
       emergencyContactPhone: formData.emergencyPhone,
-      emergencyContactEmail: formData.emergencyEmail,
-      bloodGroup: formData.bloodGroup as BloodGroup || undefined,
+      bloodGroup: formData.bloodGroup as BloodGroup,
       allergies: formData.allergies.split(',').map(s => s.trim()).filter(Boolean),
       chronicConditions: formData.chronicConditions.split(',').map(s => s.trim()).filter(Boolean),
-      currentMedications: formData.currentMedications.split(',').map(s => s.trim()).filter(Boolean),
       insuranceProvider: formData.insuranceProvider,
-      insurancePolicyNumber: formData.policyNumber,
     };
 
     try {
@@ -143,8 +135,8 @@ const NewPatient = () => {
                   setFormData({
                     firstName: "", lastName: "", studentId: "", dateOfBirth: "", gender: "", nationality: "",
                     phone: "", email: "", address: "", emergencyName: "", emergencyRelationship: "", emergencyPhone: "",
-                    emergencyEmail: "", bloodGroup: "", allergies: "", chronicConditions: "", currentMedications: "",
-                    previousSurgeries: "", insuranceProvider: "", policyNumber: "", notes: ""
+                    emergencyEmail: "", bloodGroup: "", allergies: "", chronicConditions: "",
+                    previousSurgeries: "", insuranceProvider: "", notes: ""
                   });
                 }}>
                   <UserPlus className="mr-2 h-4 w-4" />
@@ -428,17 +420,6 @@ const NewPatient = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="currentMedications">Current Medications</Label>
-                    <Textarea
-                      id="currentMedications"
-                      value={formData.currentMedications}
-                      onChange={(e) => handleInputChange('currentMedications', e.target.value)}
-                      placeholder="List current medications and dosages (comma separated)"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
                     <Label htmlFor="previousSurgeries">Previous Surgeries</Label>
                     <Textarea
                       id="previousSurgeries"
@@ -462,15 +443,6 @@ const NewPatient = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="policyNumber">Insurance Policy Number</Label>
-                    <Input
-                      id="policyNumber"
-                      value={formData.policyNumber}
-                      onChange={(e) => handleInputChange('policyNumber', e.target.value)}
-                      placeholder="Enter policy number"
-                    />
-                  </div>
 
                   <div>
                     <Label htmlFor="notes">Additional Notes</Label>

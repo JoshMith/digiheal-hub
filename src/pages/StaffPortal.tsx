@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Users, 
-  Calendar, 
-  Clock, 
-  FileText, 
-  Activity, 
-  BarChart3, 
+import {
+  Users,
+  Calendar,
+  Clock,
+  FileText,
+  Activity,
+  BarChart3,
   Settings,
   Search,
   Filter,
@@ -41,59 +41,61 @@ import { useInteractionQueue, useInteractionStats } from "@/hooks/use-interactio
 import { useTodayAppointments, useAppointmentStats } from "@/hooks/use-appointments";
 import { useDashboardMetrics } from "@/hooks/use-analytics";
 import { usePatients } from "@/hooks/use-patients";
-import type { Staff, QueueItem, Appointment, Department } from "@/types/api.types";
+import type { Staff, Appointment, Department, Interaction, PriorityLevel, AppointmentStatus } from "@/types/api.types";
 
 const StaffPortal = () => {
   const [activeTab, setActiveTab] = useState("queue");
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  
+
   // Cast profile to Staff type
   const staffProfile = profile as Staff | null;
   const staffDepartment = staffProfile?.department as Department | undefined;
-  
+
   // API hooks
-  const { 
-    data: queueData, 
-    isLoading: isLoadingQueue, 
-    refetch: refetchQueue 
-  } = useInteractionQueue({ 
+  const {
+    data: queueData,
+    isLoading: isLoadingQueue,
+    refetch: refetchQueue
+  } = useInteractionQueue({
     department: staffDepartment,
-    staffId: staffProfile?.id 
+    staffId: staffProfile?.id
   });
-  
-  const { 
-    data: todayAppointments, 
-    isLoading: isLoadingAppointments 
+
+  const {
+    data: todayAppointments,
+    isLoading: isLoadingAppointments
   } = useTodayAppointments(staffDepartment);
-  
-  const { 
-    data: dashboardMetrics, 
-    isLoading: isLoadingMetrics 
+
+  const {
+    data: dashboardMetrics,
+    isLoading: isLoadingMetrics
   } = useDashboardMetrics();
-  
-  const { 
-    data: interactionStats 
+
+  const {
+    data: interactionStats
   } = useInteractionStats();
-  
-  const { 
-    data: appointmentStats 
+
+  const {
+    data: appointmentStats
   } = useAppointmentStats();
-  
-  const { 
-    data: patientsData, 
-    isLoading: isLoadingPatients 
+
+  const {
+    data: patientsData,
+    isLoading: isLoadingPatients
   } = usePatients({ search: searchTerm });
 
   // Filtered queue based on search
   const filteredQueue = useMemo(() => {
     if (!queueData) return [];
     if (!searchTerm) return queueData;
-    
+
     const term = searchTerm.toLowerCase();
-    return queueData.filter((item: QueueItem) => 
-      item.patientName?.toLowerCase().includes(term) ||
+    return queueData.filter((item: Interaction) =>
+      item.patient?.firstName?.toLowerCase().includes(term) ||
+      item.patient?.lastName?.toLowerCase().includes(term) ||
+      item.patient?.studentId?.toLowerCase().includes(term) ||
       item.patientId?.toLowerCase().includes(term)
     );
   }, [queueData, searchTerm]);
@@ -110,18 +112,21 @@ const StaffPortal = () => {
 
   // Analytics with API data or fallbacks
   const analytics = {
-    todayPatients: dashboardMetrics?.todayPatients || 0,
-    pendingAppointments: appointmentStats?.pending || 0,
+    todayPatients: dashboardMetrics?.totalPatientsToday || 0,
+    totalAppointments: todayAppointments?.length || 0,
     completedConsultations: appointmentStats?.completed || 0,
-    averageWaitTime: interactionStats?.averageWaitTime 
-      ? `${Math.round(interactionStats.averageWaitTime)} min` 
+    averageWaitTime: interactionStats?.avgInteractionDuration 
+      ? `${Math.round(interactionStats.avgInteractionDuration)} min`
+      : dashboardMetrics?.avgWaitTime
+      ? `${Math.round(dashboardMetrics.avgWaitTime)} min`
       : "-- min",
     todayChange: "+0",
     waitTimeChange: "0 min"
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toUpperCase()) {
+  const getPriorityColor = (priority?: PriorityLevel | string) => {
+    const priorityUpper = priority?.toUpperCase();
+    switch (priorityUpper) {
       case "HIGH":
       case "URGENT": return "bg-destructive text-destructive-foreground";
       case "MEDIUM":
@@ -131,44 +136,74 @@ const StaffPortal = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed": return <CheckCircle className="h-4 w-4 text-accent" />;
+  const getStatusIcon = (status?: string) => {
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
+      case "completed": 
+      case "interaction_end": 
+        return <CheckCircle className="h-4 w-4 text-accent" />;
       case "in_progress":
-      case "in-progress": return <Timer className="h-4 w-4 text-primary animate-pulse" />;
+      case "interaction_in_progress":
+      case "interaction_start":
+        return <Timer className="h-4 w-4 text-primary animate-pulse" />;
       case "waiting":
-      case "checked_in": return <AlertTriangle className="h-4 w-4 text-warning" />;
-      case "scheduled": return <Calendar className="h-4 w-4 text-muted-foreground" />;
-      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
+      case "checked_in":
+      case "check_in_time":
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
+      case "scheduled": 
+        return <Calendar className="h-4 w-4 text-muted-foreground" />;
+      default: 
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed": return <Badge variant="outline" className="border-accent text-accent">Completed</Badge>;
-      case "in_progress":
-      case "in-progress": return <Badge className="bg-primary">In Progress</Badge>;
+  const getStatusBadge = (status?: AppointmentStatus | string) => {
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
+      case "completed": 
+        return <Badge variant="outline" className="border-accent text-accent">Completed</Badge>;
+      case "in_progress": 
+        return <Badge className="bg-primary">In Progress</Badge>;
       case "waiting":
-      case "checked_in": return <Badge variant="outline" className="border-warning text-warning">Waiting</Badge>;
-      case "scheduled": return <Badge variant="secondary">Scheduled</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case "checked_in": 
+        return <Badge variant="outline" className="border-warning text-warning">Waiting</Badge>;
+      case "scheduled": 
+        return <Badge variant="secondary">Scheduled</Badge>;
+      default: 
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const formatTime = (dateString?: string) => {
     if (!dateString) return "--:--";
-    return new Date(dateString).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
+    try {
+      return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return "--:--";
+    }
   };
 
   const calculateWaitTime = (checkInTime?: string) => {
     if (!checkInTime) return "0 min";
-    const diff = Date.now() - new Date(checkInTime).getTime();
-    const minutes = Math.floor(diff / 60000);
-    return `${minutes} min`;
+    try {
+      const diff = Date.now() - new Date(checkInTime).getTime();
+      const minutes = Math.floor(diff / 60000);
+      return `${minutes} min`;
+    } catch (error) {
+      return "0 min";
+    }
+  };
+
+  // Get queue position or status for interaction
+  const getInteractionStatus = (interaction: Interaction) => {
+    if (interaction.checkoutTime) return "COMPLETED";
+    if (interaction.interactionStartTime) return "INTERACTION_IN_PROGRESS";
+    if (interaction.checkInTime) return "CHECKED_IN";
+    return "SCHEDULED";
   };
 
   return (
@@ -247,10 +282,10 @@ const StaffPortal = () => {
                   {isLoadingMetrics ? (
                     <Skeleton className="h-9 w-12 mb-1" />
                   ) : (
-                    <p className="text-3xl font-bold text-primary">{analytics.pendingAppointments}</p>
+                    <p className="text-3xl font-bold text-primary">{analytics.totalAppointments}</p>
                   )}
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-xs text-muted-foreground mt-1">In queue</p>
+                  <p className="text-sm text-muted-foreground">Total Appointments</p>
+                  <p className="text-xs text-muted-foreground mt-1">Today's count</p>
                 </div>
                 <div className="w-14 h-14 bg-warning/20 rounded-xl flex items-center justify-center shadow-soft">
                   <Calendar className="h-7 w-7 text-warning" />
@@ -269,12 +304,12 @@ const StaffPortal = () => {
                     <p className="text-3xl font-bold text-primary">{analytics.completedConsultations}</p>
                   )}
                   <p className="text-sm text-muted-foreground">Completed</p>
-                  <Progress 
-                    value={analytics.todayPatients > 0 
-                      ? (analytics.completedConsultations / analytics.todayPatients) * 100 
+                  <Progress
+                    value={analytics.todayPatients > 0
+                      ? (analytics.completedConsultations / analytics.todayPatients) * 100
                       : 0
-                    } 
-                    className="h-1.5 mt-2 w-20" 
+                    }
+                    className="h-1.5 mt-2 w-20"
                   />
                 </div>
                 <div className="w-14 h-14 bg-gradient-health rounded-xl flex items-center justify-center shadow-soft">
@@ -347,8 +382,8 @@ const StaffPortal = () => {
                       <div className="flex gap-2">
                         <div className="relative">
                           <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                          <Input 
-                            placeholder="Search queue..." 
+                          <Input
+                            placeholder="Search queue..."
                             className="pl-10 w-48"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -357,9 +392,9 @@ const StaffPortal = () => {
                         <Button size="icon" variant="outline">
                           <Filter className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          size="icon" 
-                          variant="outline" 
+                        <Button
+                          size="icon"
+                          variant="outline"
                           onClick={() => refetchQueue()}
                           disabled={isLoadingQueue}
                         >
@@ -393,78 +428,84 @@ const StaffPortal = () => {
                         <p>No patients in queue</p>
                       </div>
                     ) : (
-                      filteredQueue.map((patient: QueueItem, index: number) => (
-                        <div 
-                          key={patient.interactionId || patient.appointmentId || index} 
-                          className={`flex items-center justify-between p-4 rounded-xl border transition-all hover:shadow-soft ${
-                            patient.priority === 'HIGH' || patient.priority === 'URGENT' 
-                              ? 'border-destructive/30 bg-destructive/5' : 
-                            patient.status === 'INTERACTION_IN_PROGRESS' 
-                              ? 'border-primary/30 bg-primary/5' : 
-                            'hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="flex flex-col items-center min-w-[60px]">
-                              <span className="text-2xl font-bold text-muted-foreground">#{patient.queuePosition || index + 1}</span>
-                              <Badge className={`text-xs ${getPriorityColor(patient.priority)}`}>
-                                {patient.priority}
-                              </Badge>
-                            </div>
-                            <div className="w-12 h-12 bg-gradient-secondary rounded-full flex items-center justify-center">
-                              <span className="text-lg font-semibold text-primary">
-                                {patient.patientName?.split(' ').map(n => n[0]).join('') || '??'}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-semibold">{patient.patientName || 'Unknown Patient'}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {patient.patientId} • {patient.department}
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {patient.appointmentType || 'General Consultation'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-medium">{formatTime(patient.checkInTime)}</p>
-                              <div className="flex items-center gap-1 justify-end">
-                                {getStatusIcon(patient.status)}
-                                <span className="text-sm text-muted-foreground capitalize">
-                                  {patient.status?.replace(/_/g, ' ').toLowerCase()}
+                      filteredQueue.map((interaction: Interaction, index: number) => {
+                        const status = getInteractionStatus(interaction);
+                        return (
+                          <div
+                            key={interaction.id || index}
+                            className={`flex items-center justify-between p-4 rounded-xl border transition-all hover:shadow-soft ${interaction.priority === 'HIGH' || interaction.priority === 'URGENT'
+                              ? 'border-destructive/30 bg-destructive/5' :
+                              status === 'INTERACTION_IN_PROGRESS'
+                                ? 'border-primary/30 bg-primary/5' :
+                                'hover:bg-muted/50'
+                              }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="flex flex-col items-center min-w-[60px]">
+                                <span className="text-2xl font-bold text-muted-foreground">
+                                  #{index + 1}
+                                </span>
+                                <Badge className={`text-xs ${getPriorityColor(interaction.priority)}`}>
+                                  {interaction.priority}
+                                </Badge>
+                              </div>
+                              <div className="w-12 h-12 bg-gradient-secondary rounded-full flex items-center justify-center">
+                                <span className="text-lg font-semibold text-primary">
+                                  {interaction.patient?.firstName?.[0]}{interaction.patient?.lastName?.[0] || '??'}
                                 </span>
                               </div>
-                              {patient.checkInTime && (
-                                <p className="text-xs text-warning mt-1">
-                                  Wait: {calculateWaitTime(patient.checkInTime)}
+                              <div>
+                                <p className="font-semibold">
+                                  {interaction.patient ? `${interaction.patient.firstName} ${interaction.patient.lastName}` : 'Unknown Patient'}
                                 </p>
-                              )}
-                              {patient.predictedDuration && (
-                                <p className="text-xs text-muted-foreground">
-                                  Est: {patient.predictedDuration} min
+                                <p className="text-sm text-muted-foreground">
+                                  {interaction.patient?.studentId || interaction.patientId} • {interaction.department}
                                 </p>
-                              )}
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {interaction.appointmentType || 'General Consultation'}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex flex-col gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => navigate(`/patient/${patient.patientId}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                className="bg-accent hover:bg-accent-hover text-accent-foreground" 
-                                onClick={() => navigate(`/patient/${patient.patientId}`)}
-                              >
-                                <HeartPulse className="h-4 w-4" />
-                              </Button>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-medium">{formatTime(interaction.checkInTime)}</p>
+                                <div className="flex items-center gap-1 justify-end">
+                                  {getStatusIcon(status)}
+                                  <span className="text-sm text-muted-foreground capitalize">
+                                    {status.replace(/_/g, ' ').toLowerCase()}
+                                  </span>
+                                </div>
+                                {interaction.checkInTime && (
+                                  <p className="text-xs text-warning mt-1">
+                                    Wait: {calculateWaitTime(interaction.checkInTime)}
+                                  </p>
+                                )}
+                                {interaction.predictedDuration && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Est: {interaction.predictedDuration} min
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => navigate(`/patient/${interaction.patient?.id || interaction.patientId}`)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-accent hover:bg-accent-hover text-accent-foreground"
+                                  onClick={() => navigate(`/patient/${interaction.patient?.id || interaction.patientId}`)}
+                                >
+                                  <HeartPulse className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </CardContent>
                 </Card>
@@ -504,31 +545,30 @@ const StaffPortal = () => {
                         <div className="relative">
                           {/* Timeline line */}
                           <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-muted" />
-                          
+
                           {todayAppointments.map((apt: Appointment, index: number) => (
                             <div key={apt.id || index} className="relative flex items-start gap-4 pb-6">
                               {/* Timeline dot */}
-                              <div className={`relative z-10 w-4 h-4 rounded-full mt-1 ${
-                                apt.status === 'COMPLETED' ? 'bg-accent' :
+                              <div className={`relative z-10 w-4 h-4 rounded-full mt-1 ${apt.status === 'COMPLETED' ? 'bg-accent' :
                                 apt.status === 'IN_PROGRESS' ? 'bg-primary animate-pulse' :
-                                apt.status === 'CHECKED_IN' ? 'bg-warning' :
-                                'bg-muted-foreground'
-                              }`} style={{ marginLeft: '22px' }} />
-                              
+                                  apt.status === 'CHECKED_IN' ? 'bg-warning' :
+                                    'bg-muted-foreground'
+                                }`} style={{ marginLeft: '22px' }} />
+
                               <div className="flex-1 ml-4 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
                                     <p className="text-sm text-muted-foreground">
-                                      Patient: {apt.patientId?.slice(0, 8) || 'Unknown'}
+                                      Patient: {apt.patient?.studentId || apt.patientId?.slice(0, 8) || 'Unknown'}
                                     </p>
                                   </div>
                                   {getStatusBadge(apt.status)}
                                 </div>
                                 <div className="flex items-center justify-between mt-2">
-                                  <Badge variant="outline">{apt.appointmentType}</Badge>
+                                  <Badge variant="outline">{apt.type}</Badge>
                                   <span className="text-xs text-muted-foreground">
-                                    {apt.duration ? `${apt.duration} min` : `est. ${apt.duration || 20} min`}
+                                    {apt.duration ? `${apt.duration} min` : `est. 20 min`}
                                   </span>
                                 </div>
                               </div>
@@ -555,8 +595,8 @@ const StaffPortal = () => {
                       </div>
                       <div className="relative">
                         <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          placeholder="Search patients..." 
+                        <Input
+                          placeholder="Search patients..."
                           className="pl-10 w-64"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
@@ -577,15 +617,15 @@ const StaffPortal = () => {
                             <Skeleton className="h-8 w-16" />
                           </div>
                         ))
-                      ) : !patientsData?.length ? (
+                      ) : !patientsData?.data?.length ? (
                         <div className="text-center py-8 text-muted-foreground">
                           <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                           <p>{searchTerm ? 'No patients found' : 'Search for patients'}</p>
                         </div>
                       ) : (
-                        patientsData.map((patient) => (
-                          <div 
-                            key={patient.id} 
+                        patientsData.data.map((patient) => (
+                          <div
+                            key={patient.id}
                             className="flex items-center justify-between p-3 mb-2 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                             onClick={() => navigate(`/patient/${patient.id}`)}
                           >
@@ -670,15 +710,17 @@ const StaffPortal = () => {
               <CardContent>
                 <ScrollArea className="h-[150px]">
                   <div className="space-y-3">
-                    {queueData && queueData.filter((q: QueueItem) => 
-                      q.priority === 'HIGH' || q.priority === 'URGENT'
+                    {queueData && queueData.filter((interaction: Interaction) =>
+                      interaction.priority === 'HIGH' || interaction.priority === 'URGENT'
                     ).length > 0 ? (
-                      queueData.filter((q: QueueItem) => 
-                        q.priority === 'HIGH' || q.priority === 'URGENT'
-                      ).map((item: QueueItem) => (
-                        <div key={item.interactionId} className="p-2 bg-destructive/10 rounded-lg">
+                      queueData.filter((interaction: Interaction) =>
+                        interaction.priority === 'HIGH' || interaction.priority === 'URGENT'
+                      ).map((interaction: Interaction) => (
+                        <div key={interaction.id} className="p-2 bg-destructive/10 rounded-lg">
                           <p className="text-sm font-medium text-destructive">High Priority</p>
-                          <p className="text-xs text-muted-foreground">{item.patientName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {interaction.patient ? `${interaction.patient.firstName} ${interaction.patient.lastName}` : 'Patient'}
+                          </p>
                         </div>
                       ))
                     ) : (

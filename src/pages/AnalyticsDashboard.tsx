@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  Clock, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  Clock,
   Calendar,
   Activity,
   Target,
@@ -18,13 +18,13 @@ import {
   Brain
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -75,13 +75,13 @@ const AnalyticsDashboard = () => {
 
   // API hooks
   const { data: dashboardMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(dateRangeParams);
-  const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({ 
-    ...dateRangeParams, 
-    granularity: 'hourly' 
+  const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({
+    ...dateRangeParams,
+    granularity: 'hourly'
   });
-  const { data: waitTimeData, isLoading: isLoadingWaitTime, refetch: refetchWaitTime } = useWaitTimeData({ 
-    ...dateRangeParams, 
-    granularity: 'daily' 
+  const { data: waitTimeData, isLoading: isLoadingWaitTime, refetch: refetchWaitTime } = useWaitTimeData({
+    ...dateRangeParams,
+    granularity: 'daily'
   });
   const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad(dateRangeParams);
   const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance(dateRangeParams);
@@ -134,20 +134,19 @@ const AnalyticsDashboard = () => {
 
   // Appointment type data (from dashboard metrics or defaults)
   const appointmentTypeData = [
-    { name: "Walk-in", value: dashboardMetrics?.walkInCount || 35, color: "hsl(var(--primary))" },
-    { name: "Scheduled", value: dashboardMetrics?.scheduledCount || 40, color: "hsl(var(--accent))" },
-    { name: "Follow-up", value: dashboardMetrics?.followUpCount || 15, color: "hsl(var(--warning))" },
-    { name: "Emergency", value: dashboardMetrics?.emergencyCount || 10, color: "hsl(var(--destructive))" },
-  ];
+  { name: "Walk-in", value: 0, color: "hsl(var(--primary))" },
+  { name: "Scheduled", value: 0, color: "hsl(var(--accent))" },
+  { name: "Follow-up", value: 0, color: "hsl(var(--warning))" },
+  { name: "Emergency", value: 0, color: "hsl(var(--destructive))" },
+];
+// Show message: "Appointment type breakdown not available"
 
   // Summary stats from API or fallbacks
   const summaryStats = {
-    totalPatients: dashboardMetrics?.totalPatients || todayStats?.totalPatients || 0,
-    todayPatients: todayStats?.todayPatients || dashboardMetrics?.todayPatients || 0,
-    avgWaitTime: todayStats?.avgWaitTime || dashboardMetrics?.avgWaitTime || 0,
+    totalPatients: dashboardMetrics?.totalPatientsToday || 0,
+    avgWaitTime: dashboardMetrics?.avgWaitTime || 0,
     completionRate: dashboardMetrics?.completionRate || 0,
     noShowRate: dashboardMetrics?.noShowRate || 0,
-    predictionAccuracy: dashboardMetrics?.predictionAccuracy || formattedPredictionData[formattedPredictionData.length - 1]?.accuracy || 0,
   };
 
   const isLoading = isLoadingMetrics || isLoadingToday;
@@ -209,7 +208,7 @@ const AnalyticsDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-medium">
+          {/* <Card className="shadow-medium">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-health rounded-lg flex items-center justify-center">
@@ -219,13 +218,13 @@ const AnalyticsDashboard = () => {
                   {isLoading ? (
                     <Skeleton className="h-7 w-12" />
                   ) : (
-                    <p className="text-2xl font-bold text-primary">{summaryStats.todayPatients}</p>
+                    <p className="text-2xl font-bold text-primary">{todayStats.data?.todayPatients || 0}</p>
                   )}
                   <p className="text-xs text-muted-foreground">Today</p>
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card className="shadow-medium">
             <CardContent className="p-4">
@@ -291,7 +290,7 @@ const AnalyticsDashboard = () => {
                   {isLoading ? (
                     <Skeleton className="h-7 w-14" />
                   ) : (
-                    <p className="text-2xl font-bold text-primary">{Math.round(summaryStats.predictionAccuracy)}%</p>
+                    <p className="text-2xl font-bold text-primary">{Math.round(Number(predictionAccuracy))}%</p>
                   )}
                   <p className="text-xs text-muted-foreground">ML Accuracy</p>
                 </div>
@@ -335,18 +334,18 @@ const AnalyticsDashboard = () => {
                           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                           <XAxis dataKey="time" className="text-xs" />
                           <YAxis className="text-xs" />
-                          <Tooltip 
-                            contentStyle={{ 
+                          <Tooltip
+                            contentStyle={{
                               backgroundColor: 'hsl(var(--card))',
                               border: '1px solid hsl(var(--border))',
                               borderRadius: '8px'
-                            }} 
+                            }}
                           />
-                          <Area 
-                            type="monotone" 
-                            dataKey="patients" 
-                            stroke="hsl(var(--primary))" 
-                            fill="hsl(var(--primary) / 0.2)" 
+                          <Area
+                            type="monotone"
+                            dataKey="patients"
+                            stroke="hsl(var(--primary))"
+                            fill="hsl(var(--primary) / 0.2)"
                             strokeWidth={2}
                           />
                         </AreaChart>
@@ -381,12 +380,12 @@ const AnalyticsDashboard = () => {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
+                        <Tooltip
+                          contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
-                          }} 
+                          }}
                         />
                         <Legend />
                       </PieChart>
@@ -419,27 +418,27 @@ const AnalyticsDashboard = () => {
                           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                           <XAxis dataKey="date" className="text-xs" />
                           <YAxis className="text-xs" />
-                          <Tooltip 
-                            contentStyle={{ 
+                          <Tooltip
+                            contentStyle={{
                               backgroundColor: 'hsl(var(--card))',
                               border: '1px solid hsl(var(--border))',
                               borderRadius: '8px'
-                            }} 
+                            }}
                           />
                           <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="avgWait" 
+                          <Line
+                            type="monotone"
+                            dataKey="avgWait"
                             name="Actual Wait Time"
-                            stroke="hsl(var(--primary))" 
+                            stroke="hsl(var(--primary))"
                             strokeWidth={2}
                             dot={{ fill: 'hsl(var(--primary))' }}
                           />
-                          <Line 
-                            type="monotone" 
-                            dataKey="predicted" 
+                          <Line
+                            type="monotone"
+                            dataKey="predicted"
                             name="ML Predicted"
-                            stroke="hsl(var(--accent))" 
+                            stroke="hsl(var(--accent))"
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             dot={{ fill: 'hsl(var(--accent))' }}
@@ -478,12 +477,12 @@ const AnalyticsDashboard = () => {
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis type="number" className="text-xs" />
                         <YAxis dataKey="name" type="category" width={100} className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
+                        <Tooltip
+                          contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
-                          }} 
+                          }}
                         />
                         <Legend />
                         <Bar dataKey="patients" name="Patients" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
@@ -547,8 +546,8 @@ const AnalyticsDashboard = () => {
                                 {staff.rating > 0 && (
                                   <div className="flex">
                                     {Array.from({ length: 5 }).map((_, i) => (
-                                      <span 
-                                        key={i} 
+                                      <span
+                                        key={i}
                                         className={`text-xs ${i < Math.round(staff.rating) ? 'text-warning' : 'text-muted'}`}
                                       >
                                         ★
@@ -593,18 +592,18 @@ const AnalyticsDashboard = () => {
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="week" className="text-xs" />
                         <YAxis domain={[0, 100]} className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
+                        <Tooltip
+                          contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
-                          }} 
+                          }}
                           formatter={(value: number) => [`${value}%`, 'Accuracy']}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="accuracy" 
-                          stroke="hsl(var(--accent))" 
+                        <Line
+                          type="monotone"
+                          dataKey="accuracy"
+                          stroke="hsl(var(--accent))"
                           strokeWidth={3}
                           dot={{ fill: 'hsl(var(--accent))', strokeWidth: 2 }}
                         />
@@ -618,7 +617,7 @@ const AnalyticsDashboard = () => {
                   <h4 className="font-semibold mb-2">ML Model Insights</h4>
                   <p className="text-sm text-muted-foreground">
                     Our machine learning model continuously learns from patient flow patterns to improve wait time predictions.
-                    Current accuracy: <span className="font-semibold text-primary">{Math.round(summaryStats.predictionAccuracy)}%</span>
+                    Current accuracy: <span className="font-semibold text-primary">{Math.round(Number(predictionAccuracy))}%</span>
                   </p>
                 </div>
               </CardContent>

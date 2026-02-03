@@ -12,6 +12,7 @@ export const analyticsKeys = {
   staffPerformance: (params?: unknown) => [...analyticsKeys.all, 'staff-performance', params] as const,
   predictionAccuracy: (params?: AnalyticsDateRange) => [...analyticsKeys.all, 'prediction-accuracy', params] as const,
   peakHours: (params?: AnalyticsDateRange) => [...analyticsKeys.all, 'peak-hours', params] as const,
+  todayStats: () => [...analyticsKeys.all, 'today-stats'] as const,
 };
 
 // Get dashboard metrics
@@ -105,10 +106,7 @@ export function usePeakHours(params?: AnalyticsDateRange) {
 // Get today's quick stats
 export function useTodayStats() {
   return useQuery({
-    queryKey: analyticsKeys.dashboard(),
-    queryFn: async () => {
-      const response = await analyticsApi.getTodayStats();
-      return response.data;
-    },
+    queryKey: analyticsKeys.todayStats(),
+    queryFn: () => analyticsApi.getDashboard(), // Use dashboard, not getTodayStats
   });
 }

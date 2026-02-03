@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/authContext";
 import { useCreateAppointment, useAvailableSlots } from "@/hooks/use-appointments";
-import type { Department, AppointmentType, CreateAppointmentRequest } from "@/types/api.types";
+import { Department, AppointmentType, CreateAppointmentRequest, PriorityLevel } from "@/types/api.types";
 
 const BookAppointment = () => {
   const [date, setDate] = useState<Date>();
@@ -32,13 +32,13 @@ const BookAppointment = () => {
     symptoms: "",
     notes: ""
   });
-  
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const createAppointmentMutation = useCreateAppointment();
-  
+
   // Fetch available slots when date and department are selected
   const { data: availableSlots, isLoading: isLoadingSlots } = useAvailableSlots(
     date && department ? {
@@ -48,28 +48,28 @@ const BookAppointment = () => {
   );
 
   const departments: { value: Department; label: string }[] = [
-    { value: "GENERAL_MEDICINE", label: "General Medicine" },
-    { value: "CARDIOLOGY", label: "Cardiology" },
-    { value: "DERMATOLOGY", label: "Dermatology" },
-    { value: "ORTHOPEDICS", label: "Orthopedics" },
-    { value: "GYNECOLOGY", label: "Gynecology" },
-    { value: "PEDIATRICS", label: "Pediatrics" },
-    { value: "MENTAL_HEALTH", label: "Mental Health" },
-    { value: "EMERGENCY", label: "Emergency" }
+    { value: Department.GENERAL_MEDICINE, label: "General Medicine" },
+    { value: Department.EMERGENCY, label: "Emergency" },
+    { value: Department.PEDIATRICS, label: "Pediatrics" },
+    { value: Department.MENTAL_HEALTH, label: "Mental Health" },
+    { value: Department.DENTAL, label: "Dental" },
+    { value: Department.PHARMACY, label: "Pharmacy" },
+    { value: Department.LABORATORY, label: "Laboratory" }
   ];
+
 
   const appointmentTypes: { value: AppointmentType; label: string }[] = [
-    { value: "GENERAL_VISIT", label: "General Visit" },
-    { value: "FOLLOW_UP", label: "Follow-up" },
-    { value: "CHECK_UP", label: "Check-up" },
-    { value: "EMERGENCY", label: "Emergency" },
-    { value: "VACCINATION", label: "Vaccination" }
+    { value: AppointmentType.WALK_IN, label: "Walk-in" },
+    { value: AppointmentType.SCHEDULED, label: "Scheduled" },
+    { value: AppointmentType.FOLLOW_UP, label: "Follow-up" },
+    { value: AppointmentType.EMERGENCY, label: "Emergency" },
+    { value: AppointmentType.ROUTINE_CHECKUP, label: "Routine Check-up" }
   ];
 
+
   // Get time slots from API or default list
-  const timeSlots = availableSlots?.map((slot: { startTime: string; time?: string }) => 
-    slot.startTime || slot.time || ''
-  ).filter(Boolean) || [
+  // Get time slots from API or default list
+  const timeSlots = availableSlots?.availableSlots || [
     "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
     "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM"
   ];
@@ -81,7 +81,7 @@ const BookAppointment = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!date || !timeSlot || !department || !appointmentType) {
       toast({
         title: "Missing Information",
@@ -94,20 +94,21 @@ const BookAppointment = () => {
     // Parse time slot to create appointment time
     const [time, meridiem] = timeSlot.split(' ');
     const [hours, minutes] = time.split(':').map(Number);
-    const adjustedHours = meridiem === 'PM' && hours !== 12 ? hours + 12 : 
-                          meridiem === 'AM' && hours === 12 ? 0 : hours;
-    
+    const adjustedHours = meridiem === 'PM' && hours !== 12 ? hours + 12 :
+      meridiem === 'AM' && hours === 12 ? 0 : hours;
+
     const appointmentDateTime = new Date(date);
     appointmentDateTime.setHours(adjustedHours, minutes, 0, 0);
 
     const appointmentData: CreateAppointmentRequest = {
       patientId: user?.id || '',
       department: department as Department,
-      appointmentType: appointmentType as AppointmentType,
-      appointmentTime: appointmentDateTime.toISOString(),
+      type: appointmentType as AppointmentType,
+      appointmentDate: format(date, 'yyyy-MM-dd'),
+      appointmentTime: format(appointmentDateTime, 'HH:mm:ss'),
       reason: formData.symptoms,
       notes: formData.notes,
-      priority: appointmentType === 'EMERGENCY' ? 'HIGH' : 'NORMAL',
+      priority: appointmentType === AppointmentType.EMERGENCY ? PriorityLevel.HIGH : PriorityLevel.NORMAL,
     };
 
     try {
@@ -199,20 +200,20 @@ const BookAppointment = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input 
-                        id="firstName" 
-                        placeholder="John" 
-                        required 
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        required
                         value={formData.firstName}
                         onChange={handleInputChange}
                       />
                     </div>
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input 
-                        id="lastName" 
-                        placeholder="Doe" 
-                        required 
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        required
                         value={formData.lastName}
                         onChange={handleInputChange}
                       />
@@ -220,32 +221,32 @@ const BookAppointment = () => {
                   </div>
                   <div>
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="john.doe@dkut.ac.ke" 
-                      required 
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john.doe@dkut.ac.ke"
+                      required
                       value={formData.email}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input 
-                      id="phone" 
-                      type="tel" 
-                      placeholder="+254 700 000 000" 
-                      required 
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+254 700 000 000"
+                      required
                       value={formData.phone}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div>
                     <Label htmlFor="studentId">Student/Staff ID</Label>
-                    <Input 
-                      id="studentId" 
-                      placeholder="DKUT/2024/001" 
-                      required 
+                    <Input
+                      id="studentId"
+                      placeholder="DKUT/2024/001"
+                      required
                       value={formData.studentId}
                       onChange={handleInputChange}
                     />
@@ -361,8 +362,8 @@ const BookAppointment = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="symptoms">Symptoms or Reason for Visit</Label>
-                  <Textarea 
-                    id="symptoms" 
+                  <Textarea
+                    id="symptoms"
                     placeholder="Please describe your symptoms or reason for the appointment..."
                     className="min-h-[100px]"
                     required
@@ -372,8 +373,8 @@ const BookAppointment = () => {
                 </div>
                 <div>
                   <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                  <Textarea 
-                    id="notes" 
+                  <Textarea
+                    id="notes"
                     placeholder="Any additional information you'd like to share..."
                     className="min-h-[80px]"
                     value={formData.notes}
@@ -385,9 +386,9 @@ const BookAppointment = () => {
 
             {/* Submit Button */}
             <div className="text-center">
-              <Button 
-                type="submit" 
-                size="lg" 
+              <Button
+                type="submit"
+                size="lg"
                 className="bg-accent hover:bg-accent-hover text-accent-foreground shadow-glow px-8"
                 disabled={createAppointmentMutation.isPending}
               >

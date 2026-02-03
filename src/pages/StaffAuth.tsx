@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stethoscope, Mail, Lock, User, Phone, Building, AlertCircle, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
-import { Department, StaffPosition, DEPARTMENT_DISPLAY, POSITION_DISPLAY } from "@/types/api.types";
+import { Department, StaffPosition } from "@/types/api.types";
 
 const StaffAuth = () => {
   const navigate = useNavigate();
@@ -121,40 +121,33 @@ const StaffAuth = () => {
     }
   };
 
+  // Add these mapping objects after your imports
+const DEPARTMENT_DISPLAY: Record<Department, string> = {
+  [Department.GENERAL_MEDICINE]: "General Medicine",
+  [Department.EMERGENCY]: "Emergency",
+  [Department.PEDIATRICS]: "Pediatrics",
+  [Department.MENTAL_HEALTH]: "Mental Health",
+  [Department.DENTAL]: "Dental",
+  [Department.PHARMACY]: "Pharmacy",
+  [Department.LABORATORY]: "Laboratory",
+};
+
+const POSITION_DISPLAY: Record<StaffPosition, string> = {
+  [StaffPosition.DOCTOR]: "Doctor",
+  [StaffPosition.NURSE]: "Nurse",
+  [StaffPosition.PHARMACIST]: "Pharmacist",
+  [StaffPosition.LAB_TECHNICIAN]: "Lab Technician",
+  [StaffPosition.ADMINISTRATOR]: "Administrator",
+  [StaffPosition.RECEPTIONIST]: "Receptionist",
+};
+
   const displayError = formError || error;
 
   // Department options
-  const departments: Department[] = [
-    'GENERAL_MEDICINE',
-    'EMERGENCY',
-    'PEDIATRICS',
-    'MENTAL_HEALTH',
-    'DENTAL',
-    'OPHTHALMOLOGY',
-    'PHARMACY',
-    'LABORATORY',
-    'RADIOLOGY',
-    'NURSING',
-    'ADMINISTRATION',
-    'CARDIOLOGY',
-    'DERMATOLOGY',
-    'ORTHOPEDICS',
-    'GYNECOLOGY',
-  ];
+  const departments: Department[] = Object.values(Department);
 
   // Position options
-  const positions: StaffPosition[] = [
-    'DOCTOR',
-    'NURSE',
-    'PHARMACIST',
-    'LAB_TECHNICIAN',
-    'RADIOLOGIST',
-    'ADMINISTRATOR',
-    'RECEPTIONIST',
-    'SPECIALIST',
-    'CONSULTANT',
-    'INTERN',
-  ];
+  const positions: StaffPosition[] = Object.values(StaffPosition);  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle px-4 py-8">

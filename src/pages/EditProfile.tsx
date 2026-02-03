@@ -10,52 +10,63 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/authContext";
 import { usePatient, useUpdatePatient } from "@/hooks/use-patients";
-import type { Patient } from "@/types/api.types";
+import { bloodGroupOptions } from "@/utils/enumMappings";
 
 const EditProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   // Fetch patient data
-  const { data: patient, isLoading: isLoadingPatient } = usePatient(user?.id || '');
+  const { profile } = useAuth(); // profile contains patient data
+  const patientId = profile?.id; // This is the actual patient ID
+  const { data: patient } = usePatient(patientId || '');
   const updatePatientMutation = useUpdatePatient();
+  const isLoadingPatient = !patient && !!patientId;
 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
+    bloodGroup: "",
     dateOfBirth: "",
     address: "",
     emergencyContact: "",
     medicalConditions: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    chronicConditions: "",
     allergies: "",
     insurance: ""
   });
 
   // Populate form when patient data loads
   useEffect(() => {
-    if (patient) {
-      setFormData({
-        firstName: patient.firstName || "",
-        lastName: patient.lastName || "",
-        email: patient.email || "",
-        phone: patient.phone || "",
-        dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : "",
-        address: patient.address || "",
-        emergencyContact: patient.emergencyContactName 
-          ? `${patient.emergencyContactName} - ${patient.emergencyContactPhone || ''}`
-          : "",
-        medicalConditions: patient.chronicConditions?.join(', ') || "",
-        allergies: patient.allergies?.join(', ') || "",
-        insurance: patient.insuranceProvider 
-          ? `${patient.insuranceProvider} - Policy #${patient.insurancePolicyNumber || ''}`
-          : ""
-      });
-    }
-  }, [patient]);
-
+  if (patient && profile) {
+    setFormData({
+      // From profile (Patient | Staff)
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      email: user.email || "",
+      phone: profile.phone || "",
+      
+      // From patient (Patient)
+      bloodGroup: patient.bloodGroup || "",
+      dateOfBirth: patient.dateOfBirth || "",
+      address: patient.address || "",
+      emergencyContactName: patient.emergencyContactName || "",
+      emergencyContactPhone: patient.emergencyContactPhone || "",
+      chronicConditions: patient.chronicConditions?.join(', ') || "",
+      allergies: patient.allergies?.join(', ') || "",
+      insurance: patient.insuranceProvider || "",
+      
+      // Set default values for fields not in API response
+      emergencyContact: patient.emergencyContactPhone || "", // Map to emergencyContactPhone
+      medicalConditions: patient.chronicConditions?.join(', ') || "", // Same as chronicConditions
+    });
+  }
+}, [patient, profile]);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -84,19 +95,14 @@ const EditProfile = () => {
     const insuranceProvider = insuranceParts[0] || '';
     const insurancePolicyNumber = insuranceParts[1] || '';
 
-    const updateData: Partial<Patient> = {
+    const updateData = {
       firstName: formData.firstName,
       lastName: formData.lastName,
-      email: formData.email,
       phone: formData.phone,
-      dateOfBirth: formData.dateOfBirth,
-      address: formData.address,
       emergencyContactName: emergencyName,
       emergencyContactPhone: emergencyPhone,
-      chronicConditions: formData.medicalConditions.split(',').map(s => s.trim()).filter(Boolean),
       allergies: formData.allergies.split(',').map(s => s.trim()).filter(Boolean),
-      insuranceProvider,
-      insurancePolicyNumber,
+      chronicConditions: formData.medicalConditions.split(',').map(s => s.trim()).filter(Boolean),
     };
 
     try {
@@ -309,8 +315,8 @@ const EditProfile = () => {
             <Button variant="outline" onClick={() => navigate("/patient-dashboard")}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               className="flex items-center gap-2"
               disabled={updatePatientMutation.isPending}
             >

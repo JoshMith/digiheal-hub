@@ -3,6 +3,7 @@
 // Aligned with Backend Prisma Schema
 // ============================================
 
+
 // ============================================
 // ENUMS (Match Prisma Schema Exactly)
 // ============================================
@@ -75,6 +76,17 @@ export enum NotificationType {
   PRESCRIPTION_READY = 'PRESCRIPTION_READY',
   MEDICATION_REMINDER = 'MEDICATION_REMINDER',
   SYSTEM_ANNOUNCEMENT = 'SYSTEM_ANNOUNCEMENT',
+}
+
+export enum BloodGroup {
+  A_POSITIVE = 'A+',
+  A_NEGATIVE = 'A-',
+  B_POSITIVE = 'B+',
+  B_NEGATIVE = 'B-',
+  AB_POSITIVE = 'AB+',
+  AB_NEGATIVE = 'AB-',
+  O_POSITIVE = 'O+',
+  O_NEGATIVE = 'O-',
 }
 
 // ============================================
@@ -153,6 +165,7 @@ export interface Patient {
   studentId: string;
   firstName: string;
   lastName: string;
+  address: string | null;
   dateOfBirth: string;
   gender: Gender;
   phone: string;
@@ -168,6 +181,7 @@ export interface Patient {
   prescriptions?: Prescription[];
   vitalSigns?: VitalSigns[];
   notifications?: Notification[];
+  insuranceProvider?: string | null;
 }
 
 export interface PatientRegistrationRequest {

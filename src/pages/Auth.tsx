@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stethoscope, Mail, Lock, User, Phone, AlertCircle, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
-import { Gender, BloodGroup } from "@/types/api.types";
+import { Gender } from "@/types/api.types";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -32,7 +32,6 @@ const Auth = () => {
     dateOfBirth: "",
     gender: "" as Gender | "",
     phone: "",
-    bloodGroup: "" as BloodGroup | "",
     emergencyContactName: "",
     emergencyContactPhone: "",
   });
@@ -113,7 +112,6 @@ const Auth = () => {
         dateOfBirth: registerData.dateOfBirth,
         gender: registerData.gender as Gender,
         phone: registerData.phone,
-        bloodGroup: registerData.bloodGroup || undefined,
         emergencyContactName: registerData.emergencyContactName || undefined,
         emergencyContactPhone: registerData.emergencyContactPhone || undefined,
       });
@@ -340,7 +338,6 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label>Blood Group (Optional)</Label>
                     <Select
-                      value={registerData.bloodGroup}
                       onValueChange={(value) => handleSelectChange("bloodGroup", value)}
                       disabled={isLoading}
                     >

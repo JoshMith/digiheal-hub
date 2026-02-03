@@ -1,424 +1,805 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// ============================================
+// DKUT Medical Center - Patient Detail Page
+// Fully integrated with backend APIs
+// ============================================
+
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, 
-  User, 
-  FileText, 
-  Activity, 
-  Calendar, 
-  Phone, 
-  Mail, 
-  MapPin,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
+  usePatient, 
+  usePatientVitalSigns, 
+  usePatientAppointments,
+  usePatientPrescriptions,
+  usePatientStats,
+  usePatientHistory,
+  useAddVitalSigns,
+  useStartInteraction
+} from '@/hooks';
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import {
+  User,
+  Calendar,
   Pill,
-  Play,
+  Activity,
+  FileText,
+  ArrowLeft,
+  Plus,
+  Clock,
   Heart,
   Thermometer,
-  Scale,
-  Eye,
-  Timer
-} from "lucide-react";
-import InteractionTimer from "@/components/InteractionTimer";
+  Weight,
+  Ruler
+} from 'lucide-react';
+import {
+  getFullName,
+  calculateAge,
+  formatDate,
+  formatDateTime,
+  formatBloodPressure,
+  formatTemperature,
+  formatHeartRate,
+  formatOxygenSaturation,
+  formatWeight,
+  formatHeight,
+  calculateBMI,
+  getRelativeTime
+} from '@/utils/dataTransformations';
+import {
+  getDepartmentDisplay,
+  getAppointmentStatusDisplay,
+  getAppointmentStatusColor,
+  getAppointmentTypeDisplay,
+  getPrescriptionStatusDisplay,
+  getPrescriptionStatusColor,
+  getPriorityLevelDisplay,
+  getPriorityLevelColor,
+  getGenderDisplay
+} from '@/utils/enumMappings';
+import type { CreateVitalSignsRequest } from '@/types/api.types';
 
-const PatientDetail = () => {
-  const { patientId } = useParams();
+export default function PatientDetail() {
+  const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showTimer, setShowTimer] = useState(false);
-  const [interactionId, setInteractionId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [isVitalsDialogOpen, setIsVitalsDialogOpen] = useState(false);
+  const [vitalsData, setVitalsData] = useState({
+    bloodPressureSystolic: '',
+    bloodPressureDiastolic: '',
+    heartRate: '',
+    temperature: '',
+    weight: '',
+    height: '',
+    oxygenSaturation: '',
+    respiratoryRate: ''
+  });
 
-  // Mock patient data - in real app, fetch based on patientId
-  const patientData = {
-    id: patientId,
-    name: "John Doe",
-    studentId: "DKUT/2024/001",
-    avatar: "/placeholder.svg",
-    age: 22,
-    gender: "Male",
-    phone: "+254 712 345 678",
-    email: "john.doe@dkut.ac.ke",
-    address: "DKUT Campus, Hostel Block A, Room 205",
-    emergencyContact: {
-      name: "Mary Doe",
-      relationship: "Mother",
-      phone: "+254 722 123 456"
-    },
-    currentVisit: {
-      appointmentTime: "10:00 AM",
-      priority: "high",
-      reason: "Chest pain and difficulty breathing",
-      waitTime: "15 min",
-      status: "waiting",
-      symptoms: ["Chest pain", "Shortness of breath", "Dizziness"],
-      duration: "2 hours",
-      severity: "Moderate to severe"
-    },
-    vitals: {
-      bloodPressure: "140/90",
-      heartRate: "95 bpm",
-      temperature: "37.2°C",
-      weight: "70 kg",
-      height: "175 cm",
-      lastUpdated: "Today, 9:45 AM"
-    },
-    medicalHistory: [
-      {
-        date: "2024-01-15",
-        condition: "Common Cold",
-        treatment: "Rest, fluids, paracetamol",
-        doctor: "Dr. Sarah Johnson",
-        status: "Resolved"
-      },
-      {
-        date: "2023-12-10",
-        condition: "Annual Health Check",
-        treatment: "Routine examination",
-        doctor: "Dr. Michael Brown",
-        status: "Normal"
-      }
-    ],
-    prescriptions: [
-      {
-        medication: "Paracetamol 500mg",
-        dosage: "2 tablets every 6 hours",
-        duration: "3 days",
-        prescribedBy: "Dr. Sarah Johnson",
-        date: "2024-01-15"
-      }
-    ]
-  };
+  // Fetch patient data
+  const { data: patient, isLoading: isLoadingPatient, error: patientError } = usePatient(patientId!);
+  
+  // Fetch vital signs
+  const { data: vitalSigns, isLoading: isLoadingVitals } = usePatientVitalSigns(patientId!, {
+    limit: 10
+  });
+  
+  // Fetch appointments
+  const { data: appointments, isLoading: isLoadingAppointments } = usePatientAppointments(patientId!, {
+    limit: 10
+  });
+  
+  // Fetch prescriptions
+  const { data: prescriptions, isLoading: isLoadingPrescriptions } = usePatientPrescriptions(patientId!, {
+    limit: 10
+  });
+  
+  // Fetch patient stats
+  const { data: stats } = usePatientStats(patientId!);
+  
+  // Fetch medical history
+  const { data: history } = usePatientHistory(patientId!);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "bg-destructive text-destructive-foreground";
-      case "medium": return "bg-yellow-500 text-white";
-      case "low": return "bg-green-500 text-white";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
+  // Mutations
+  const addVitalsMutation = useAddVitalSigns();
+  const startInteractionMutation = useStartInteraction();
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "waiting": return <Clock className="h-4 w-4 text-yellow-500" />;
-      case "in-progress": return <Activity className="h-4 w-4 text-blue-500" />;
-      case "completed": return <CheckCircle className="h-4 w-4 text-green-500" />;
-      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const handleStartInteraction = () => {
-    // In real app, this would call the API to start an interaction
-    setInteractionId("interaction-" + Date.now());
-    setShowTimer(true);
-  };
-
-  const handleTimerComplete = (totalDuration: number) => {
-    console.log("Interaction completed with duration:", totalDuration, "seconds");
-    setShowTimer(false);
-    setInteractionId(null);
-    // In real app, this would update the interaction record
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-subtle pt-20">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" onClick={() => navigate('/staff-portal')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Portal
-          </Button>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={patientData.avatar} alt={patientData.name} />
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground text-lg">
-                {patientData.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold text-primary">{patientData.name}</h1>
-              <p className="text-muted-foreground">{patientData.studentId} • Age {patientData.age} • {patientData.gender}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className={`text-xs ${getPriorityColor(patientData.currentVisit.priority)}`}>
-                  {patientData.currentVisit.priority.toUpperCase()} PRIORITY
-                </Badge>
-                <div className="flex items-center gap-1">
-                  {getStatusIcon(patientData.currentVisit.status)}
-                  <span className="text-sm text-muted-foreground capitalize">{patientData.currentVisit.status}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+  // Handle loading state
+  if (isLoadingPatient) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading patient details...</p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Interaction Timer */}
-        {showTimer && interactionId && (
-          <div className="mb-8">
-            <InteractionTimer
-              appointmentId={interactionId}
-              patientName={patientData.name}
-              onComplete={handleTimerComplete}
-            />
-          </div>
-        )}
-
-        {/* Current Visit Alert */}
-        <Card className="mb-8 border-l-4 border-l-destructive shadow-medium">
+  // Handle error state
+  if (patientError || !patient) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-96">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Current Visit - {patientData.currentVisit.appointmentTime}
-              </CardTitle>
-              <div className="flex gap-2">
-                {!showTimer ? (
-                  <Button size="sm" className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={handleStartInteraction}>
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Interaction
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" disabled>
-                    <Timer className="h-4 w-4 mr-2" />
-                    In Progress
-                  </Button>
-                )}
-                <Button size="sm" variant="outline">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Queue
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="text-destructive">Error Loading Patient</CardTitle>
+            <CardDescription>
+              {patientError?.message || 'Patient not found'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm font-medium">Chief Complaint</p>
-                <p className="text-muted-foreground">{patientData.currentVisit.reason}</p>
+            <Button onClick={() => navigate('/staff/patients')} variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Patients
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle vital signs submission
+  const handleVitalsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const vitalsPayload: Omit<CreateVitalSignsRequest, 'patientId'> = {
+      bloodPressureSystolic: vitalsData.bloodPressureSystolic ? Number(vitalsData.bloodPressureSystolic) : undefined,
+      bloodPressureDiastolic: vitalsData.bloodPressureDiastolic ? Number(vitalsData.bloodPressureDiastolic) : undefined,
+      heartRate: vitalsData.heartRate ? Number(vitalsData.heartRate) : undefined,
+      temperature: vitalsData.temperature ? Number(vitalsData.temperature) : undefined,
+      weight: vitalsData.weight ? Number(vitalsData.weight) : undefined,
+      height: vitalsData.height ? Number(vitalsData.height) : undefined,
+      oxygenSaturation: vitalsData.oxygenSaturation ? Number(vitalsData.oxygenSaturation) : undefined,
+      respiratoryRate: vitalsData.respiratoryRate ? Number(vitalsData.respiratoryRate) : undefined,
+    };
+
+    try {
+      await addVitalsMutation.mutateAsync({
+        patientId: patientId!,
+        data: vitalsPayload
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Vital signs recorded successfully'
+      });
+      
+      setIsVitalsDialogOpen(false);
+      setVitalsData({
+        bloodPressureSystolic: '',
+        bloodPressureDiastolic: '',
+        heartRate: '',
+        temperature: '',
+        weight: '',
+        height: '',
+        oxygenSaturation: '',
+        respiratoryRate: ''
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to record vital signs',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Handle start interaction
+  const handleStartInteraction = async (appointmentId: string) => {
+    try {
+      await startInteractionMutation.mutateAsync({
+        appointmentId
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Interaction started successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to start interaction',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const latestVitals = vitalSigns?.[0];
+  const bmi = latestVitals ? calculateBMI(latestVitals.weight, latestVitals.height) : null;
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/staff/patients')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{getFullName(patient.firstName, patient.lastName)}</h1>
+            <p className="text-muted-foreground">
+              {patient.studentId} • {calculateAge(patient.dateOfBirth)} years old • {getGenderDisplay(patient.gender)}
+            </p>
+          </div>
+        </div>
+        
+        <Dialog open={isVitalsDialogOpen} onOpenChange={setIsVitalsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Record Vitals
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Record Vital Signs</DialogTitle>
+              <DialogDescription>
+                Enter the patient's current vital signs
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleVitalsSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="systolic">Blood Pressure (Systolic)</Label>
+                  <Input
+                    id="systolic"
+                    type="number"
+                    placeholder="120"
+                    value={vitalsData.bloodPressureSystolic}
+                    onChange={(e) => setVitalsData({ ...vitalsData, bloodPressureSystolic: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="diastolic">Blood Pressure (Diastolic)</Label>
+                  <Input
+                    id="diastolic"
+                    type="number"
+                    placeholder="80"
+                    value={vitalsData.bloodPressureDiastolic}
+                    onChange={(e) => setVitalsData({ ...vitalsData, bloodPressureDiastolic: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="heartRate">Heart Rate (bpm)</Label>
+                  <Input
+                    id="heartRate"
+                    type="number"
+                    placeholder="72"
+                    value={vitalsData.heartRate}
+                    onChange={(e) => setVitalsData({ ...vitalsData, heartRate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="temperature">Temperature (°C)</Label>
+                  <Input
+                    id="temperature"
+                    type="number"
+                    step="0.1"
+                    placeholder="36.5"
+                    value={vitalsData.temperature}
+                    onChange={(e) => setVitalsData({ ...vitalsData, temperature: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight (kg)</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    step="0.1"
+                    placeholder="70"
+                    value={vitalsData.weight}
+                    onChange={(e) => setVitalsData({ ...vitalsData, weight: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="height">Height (cm)</Label>
+                  <Input
+                    id="height"
+                    type="number"
+                    placeholder="175"
+                    value={vitalsData.height}
+                    onChange={(e) => setVitalsData({ ...vitalsData, height: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="oxygen">Oxygen Saturation (%)</Label>
+                  <Input
+                    id="oxygen"
+                    type="number"
+                    placeholder="98"
+                    value={vitalsData.oxygenSaturation}
+                    onChange={(e) => setVitalsData({ ...vitalsData, oxygenSaturation: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="respiratory">Respiratory Rate (/min)</Label>
+                  <Input
+                    id="respiratory"
+                    type="number"
+                    placeholder="16"
+                    value={vitalsData.respiratoryRate}
+                    onChange={(e) => setVitalsData({ ...vitalsData, respiratoryRate: e.target.value })}
+                  />
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">Symptoms</p>
-                <p className="text-muted-foreground">{patientData.currentVisit.symptoms.join(", ")}</p>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsVitalsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={addVitalsMutation.isPending}>
+                  {addVitalsMutation.isPending ? 'Saving...' : 'Save Vitals'}
+                </Button>
               </div>
-              <div>
-                <p className="text-sm font-medium">Duration & Severity</p>
-                <p className="text-muted-foreground">{patientData.currentVisit.duration} • {patientData.currentVisit.severity}</p>
-              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Patient Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Demographics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Demographics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Email</p>
+              <p className="font-medium">{patient.user?.email || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Phone</p>
+              <p className="font-medium">{patient.phone}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Date of Birth</p>
+              <p className="font-medium">{formatDate(patient.dateOfBirth)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Blood Group</p>
+              <p className="font-medium">{patient.bloodGroup || 'Unknown'}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="vitals">Vitals</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-medium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
-                    Patient Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Phone</p>
-                      <p className="text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {patientData.phone}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {patientData.email}
-                      </p>
-                    </div>
+        {/* Latest Vitals */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Latest Vitals
+            </CardTitle>
+            <CardDescription>
+              {latestVitals ? getRelativeTime(latestVitals.recordedAt) : 'No vitals recorded'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {latestVitals ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-red-500" />
+                    <span className="text-sm">Blood Pressure</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">Address</p>
-                    <p className="text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {patientData.address}
-                    </p>
-                  </div>
-                  <div className="pt-4 border-t">
-                    <p className="text-sm font-medium mb-2">Emergency Contact</p>
-                    <p className="text-sm">{patientData.emergencyContact.name} ({patientData.emergencyContact.relationship})</p>
-                    <p className="text-muted-foreground text-sm">{patientData.emergencyContact.phone}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-medium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-primary" />
-                    Current Vitals
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <Heart className="h-4 w-4 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Blood Pressure</p>
-                        <p className="text-lg font-semibold">{patientData.vitals.bloodPressure}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Heart Rate</p>
-                        <p className="text-lg font-semibold">{patientData.vitals.heartRate}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <Thermometer className="h-4 w-4 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Temperature</p>
-                        <p className="text-lg font-semibold">{patientData.vitals.temperature}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <Scale className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Weight</p>
-                        <p className="text-lg font-semibold">{patientData.vitals.weight}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4">Last updated: {patientData.vitals.lastUpdated}</p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Vitals Tab */}
-          <TabsContent value="vitals" className="space-y-6">
-            <Card className="shadow-medium">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Record New Vitals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="bp">Blood Pressure</Label>
-                    <Input id="bp" placeholder="120/80" />
-                  </div>
-                  <div>
-                    <Label htmlFor="hr">Heart Rate (bpm)</Label>
-                    <Input id="hr" placeholder="72" />
-                  </div>
-                  <div>
-                    <Label htmlFor="temp">Temperature (°C)</Label>
-                    <Input id="temp" placeholder="36.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="weight">Weight (kg)</Label>
-                    <Input id="weight" placeholder="70" />
-                  </div>
+                  <span className="font-medium">
+                    {formatBloodPressure(latestVitals.bloodPressureSystolic, latestVitals.bloodPressureDiastolic)}
+                  </span>
                 </div>
-                <Button className="mt-4">Save Vitals</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* History Tab */}
-          <TabsContent value="history" className="space-y-6">
-            <Card className="shadow-medium">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Medical History
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {patientData.medicalHistory.map((record, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold">{record.condition}</h3>
-                      <Badge variant="outline" className={record.status === 'Resolved' ? 'text-green-600 border-green-600' : ''}>
-                        {record.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">{record.treatment}</p>
-                    <p className="text-xs text-muted-foreground">{record.date} • {record.doctor}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm">Heart Rate</span>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Prescriptions Tab */}
-          <TabsContent value="prescriptions" className="space-y-6">
-            <Card className="shadow-medium">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Pill className="h-5 w-5 text-primary" />
-                  Current Prescriptions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {patientData.prescriptions.map((prescription, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <h3 className="font-semibold">{prescription.medication}</h3>
-                    <p className="text-sm text-muted-foreground">{prescription.dosage} for {prescription.duration}</p>
-                    <p className="text-xs text-muted-foreground">{prescription.date} • Prescribed by {prescription.prescribedBy}</p>
+                  <span className="font-medium">{formatHeartRate(latestVitals.heartRate)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Thermometer className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm">Temperature</span>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <span className="font-medium">{formatTemperature(latestVitals.temperature)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Weight className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm">Weight</span>
+                  </div>
+                  <span className="font-medium">{formatWeight(latestVitals.weight)}</span>
+                </div>
+                {bmi && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-sm font-medium">BMI</span>
+                    <span className="font-medium">{bmi}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No vital signs recorded yet
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Notes Tab */}
-          <TabsContent value="notes" className="space-y-6">
-            <Card className="shadow-medium">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Visit Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea placeholder="Enter visit notes here..." rows={8} />
-                <Button className="mt-4">Save Notes</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Statistics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Total Appointments</span>
+              <Badge variant="secondary">{stats?.totalAppointments || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Completed</span>
+              <Badge variant="secondary">{stats?.completedAppointments || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Upcoming</span>
+              <Badge variant="secondary">{stats?.upcomingAppointments || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Active Prescriptions</span>
+              <Badge variant="secondary">{stats?.activePrescriptions || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Last Visit</span>
+              <span className="text-sm text-muted-foreground">
+                {stats?.lastVisit ? getRelativeTime(stats.lastVisit) : 'Never'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Medical Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Allergies</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {patient.allergies.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {patient.allergies.map((allergy, index) => (
+                  <Badge key={index} variant="destructive">
+                    {allergy}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No known allergies</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Chronic Conditions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {patient.chronicConditions.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {patient.chronicConditions.map((condition, index) => (
+                  <Badge key={index} variant="outline">
+                    {condition}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No chronic conditions</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs for detailed information */}
+      <Tabs defaultValue="appointments" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="appointments">
+            <Calendar className="mr-2 h-4 w-4" />
+            Appointments
+          </TabsTrigger>
+          <TabsTrigger value="vitals">
+            <Activity className="mr-2 h-4 w-4" />
+            Vital Signs
+          </TabsTrigger>
+          <TabsTrigger value="prescriptions">
+            <Pill className="mr-2 h-4 w-4" />
+            Prescriptions
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <FileText className="mr-2 h-4 w-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Appointments Tab */}
+        <TabsContent value="appointments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appointment History</CardTitle>
+              <CardDescription>Recent and upcoming appointments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAppointments ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : appointments && appointments.length > 0 ? (
+                <div className="space-y-4">
+                  {appointments.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={getAppointmentStatusColor(appointment.status)}>
+                            {getAppointmentStatusDisplay(appointment.status)}
+                          </Badge>
+                          <Badge variant="outline">
+                            {getDepartmentDisplay(appointment.department)}
+                          </Badge>
+                          <Badge className={getPriorityLevelColor(appointment.priority)}>
+                            {getPriorityLevelDisplay(appointment.priority)}
+                          </Badge>
+                        </div>
+                        <p className="font-medium">{getAppointmentTypeDisplay(appointment.type)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(appointment.appointmentDate)} at {appointment.appointmentTime}
+                        </p>
+                        {appointment.reason && (
+                          <p className="text-sm">{appointment.reason}</p>
+                        )}
+                        {appointment.staff && (
+                          <p className="text-sm text-muted-foreground">
+                            Dr. {getFullName(appointment.staff.firstName, appointment.staff.lastName)}
+                          </p>
+                        )}
+                      </div>
+                      {appointment.status === 'CHECKED_IN' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleStartInteraction(appointment.id)}
+                          disabled={startInteractionMutation.isPending}
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          Start
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No appointments found</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Vitals Tab */}
+        <TabsContent value="vitals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Vital Signs History</CardTitle>
+              <CardDescription>Recent vital signs readings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingVitals ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : vitalSigns && vitalSigns.length > 0 ? (
+                <div className="space-y-4">
+                  {vitalSigns.map((vital) => (
+                    <div
+                      key={vital.id}
+                      className="p-4 border rounded-lg space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{formatDateTime(vital.recordedAt)}</p>
+                        <Badge variant="outline">{getRelativeTime(vital.recordedAt)}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">BP</p>
+                          <p className="font-medium">
+                            {formatBloodPressure(vital.bloodPressureSystolic, vital.bloodPressureDiastolic)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">HR</p>
+                          <p className="font-medium">{formatHeartRate(vital.heartRate)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Temp</p>
+                          <p className="font-medium">{formatTemperature(vital.temperature)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">SpO2</p>
+                          <p className="font-medium">{formatOxygenSaturation(vital.oxygenSaturation)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Weight</p>
+                          <p className="font-medium">{formatWeight(vital.weight)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Height</p>
+                          <p className="font-medium">{formatHeight(vital.height)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">RR</p>
+                          <p className="font-medium">
+                            {vital.respiratoryRate ? `${vital.respiratoryRate} /min` : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">BMI</p>
+                          <p className="font-medium">
+                            {calculateBMI(vital.weight, vital.height) || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No vital signs recorded</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Prescriptions Tab */}
+        <TabsContent value="prescriptions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Prescription History</CardTitle>
+              <CardDescription>Current and past prescriptions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPrescriptions ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : prescriptions && prescriptions.length > 0 ? (
+                <div className="space-y-4">
+                  {prescriptions.map((prescription) => (
+                    <div
+                      key={prescription.id}
+                      className="p-4 border rounded-lg space-y-2"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-lg">{prescription.medicationName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prescribed {formatDate(prescription.prescribedAt)}
+                          </p>
+                        </div>
+                        <Badge className={getPrescriptionStatusColor(prescription.status)}>
+                          {getPrescriptionStatusDisplay(prescription.status)}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Dosage</p>
+                          <p className="font-medium">{prescription.dosage}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Frequency</p>
+                          <p className="font-medium">{prescription.frequency}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Duration</p>
+                          <p className="font-medium">{prescription.duration}</p>
+                        </div>
+                        {prescription.quantity && (
+                          <div>
+                            <p className="text-muted-foreground">Quantity</p>
+                            <p className="font-medium">{prescription.quantity}</p>
+                          </div>
+                        )}
+                      </div>
+                      {prescription.instructions && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Instructions</p>
+                          <p className="text-sm">{prescription.instructions}</p>
+                        </div>
+                      )}
+                      {prescription.staff && (
+                        <p className="text-sm text-muted-foreground">
+                          Prescribed by Dr. {getFullName(prescription.staff.firstName, prescription.staff.lastName)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No prescriptions found</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Medical History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Medical History</CardTitle>
+              <CardDescription>Complete medical record</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {history ? (
+                <div className="space-y-6">
+                  {/* Appointments Summary */}
+                  {history.appointments && history.appointments.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Appointments ({history.appointments.length})</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {history.appointments.filter(a => a.status === 'COMPLETED').length} completed,{' '}
+                        {history.appointments.filter(a => a.status === 'CANCELLED').length} cancelled
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Prescriptions Summary */}
+                  {history.prescriptions && history.prescriptions.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Prescriptions ({history.prescriptions.length})</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {history.prescriptions.filter(p => p.status === 'ACTIVE').length} active,{' '}
+                        {history.prescriptions.filter(p => p.status === 'COMPLETED').length} completed
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Vital Signs Summary */}
+                  {history.vitalSigns && history.vitalSigns.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Vital Signs ({history.vitalSigns.length} readings)</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Last recorded {getRelativeTime(history.vitalSigns[0].recordedAt)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">Loading medical history...</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default PatientDetail;
+}
