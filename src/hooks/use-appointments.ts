@@ -1,137 +1,126 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { appointmentApi } from '@/api';
-import type { 
-  Appointment, 
-  CreateAppointmentRequest, 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { appointmentApi } from "@/api";
+import type {
+  Appointment,
+  CreateAppointmentRequest,
   UpdateAppointmentRequest,
+  CancelAppointmentRequest,
+  Department,
+  AppointmentStatus,
   PaginationParams,
-  Department
-} from '@/types/api.types';
+} from "@/types/api.types";
 
 // Query keys
 export const appointmentKeys = {
-  all: ['appointments'] as const,
-  lists: () => [...appointmentKeys.all, 'list'] as const,
-  list: (params?: Record<string, unknown>) => [...appointmentKeys.lists(), params] as const,
-  details: () => [...appointmentKeys.all, 'detail'] as const,
+  all: ["appointments"] as const,
+  lists: () => [...appointmentKeys.all, "list"] as const,
+  list: (params?: Record<string, unknown>) =>
+    [...appointmentKeys.lists(), params] as const,
+  details: () => [...appointmentKeys.all, "detail"] as const,
   detail: (id: string) => [...appointmentKeys.details(), id] as const,
-  byPatient: (patientId: string, params?: unknown) => 
-    [...appointmentKeys.all, 'patient', patientId, params] as const,
+  byPatient: (patientId: string, params?: unknown) =>
+    [...appointmentKeys.all, "patient", patientId, params] as const,
   byStaff: (staffId: string, params?: unknown) =>
-    [...appointmentKeys.all, 'staff', staffId, params] as const,
-  today: (department?: Department) => [...appointmentKeys.all, 'today', department] as const,
-  slots: (params: { date: string; department: Department; staffId?: string }) => 
-    [...appointmentKeys.all, 'slots', params] as const,
-  stats: (params?: Record<string, unknown>) => [...appointmentKeys.all, 'stats', params] as const,
+    [...appointmentKeys.all, "staff", staffId, params] as const,
+  today: (department?: Department) =>
+    [...appointmentKeys.all, "today", department] as const,
+  slots: (params: { date: string; department: Department; staffId?: string }) =>
+    [...appointmentKeys.all, "slots", params] as const,
+  stats: (params?: Record<string, unknown>) =>
+    [...appointmentKeys.all, "stats", params] as const,
 };
 
 // Get appointment by ID
 export function useAppointment(appointmentId: string) {
   return useQuery({
     queryKey: appointmentKeys.detail(appointmentId),
-    queryFn: async () => {
-      const response = await appointmentApi.getById(appointmentId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => appointmentApi.getAppointment(appointmentId),
     enabled: !!appointmentId,
   });
 }
 
 // Get patient appointments
 export function usePatientAppointments(
-  patientId: string, 
-  params?: PaginationParams & { status?: string }
+  patientId: string,
+  params?: PaginationParams & { status?: AppointmentStatus },
 ) {
   return useQuery({
     queryKey: appointmentKeys.byPatient(patientId, params),
-    queryFn: async () => {
-      const response = await appointmentApi.getByPatient(patientId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () =>
+      appointmentApi.getAppointments({
+        patientId,
+        ...params,
+      }),
     enabled: !!patientId,
   });
 }
 
 // Get staff appointments
 export function useStaffAppointments(
-  staffId: string, 
-  params?: PaginationParams & { date?: string }
+  staffId: string,
+  params?: PaginationParams & { date?: string; status?: AppointmentStatus },
 ) {
   return useQuery({
     queryKey: appointmentKeys.byStaff(staffId, params),
-    queryFn: async () => {
-      const response = await appointmentApi.getByStaff(staffId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () =>
+      appointmentApi.getAppointments({
+        staffId,
+        ...params,
+      }),
     enabled: !!staffId,
   });
 }
 
 // Get today's appointments by department
-export function useTodayAppointments(department?: Department) {
+export function useTodayAppointments(department?: string) {
   return useQuery({
-    queryKey: appointmentKeys.today(department),
-    queryFn: async () => {
-      if (department) {
-        const response = await appointmentApi.getTodayByDepartment(department);
-        if (!response.success) throw new Error(response.message);
-        return response.data;
-      }
-      const response = await appointmentApi.getToday();
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryKey: appointmentKeys.today(department as Department),
+    queryFn: () =>
+      department
+        ? appointmentApi.getTodayAppointments({
+            department: department as Department,
+          })
+        : appointmentApi.getTodayAppointments(),
   });
 }
 
 // Get available time slots
-export function useAvailableSlots(params: { 
-  date: string; 
-  department: Department; 
-  staffId?: string 
+export function useAvailableSlots(params: {
+  date: string;
+  department: Department;
+  staffId?: string;
+  duration?: number;
 }) {
   return useQuery({
     queryKey: appointmentKeys.slots(params),
-    queryFn: async () => {
-      const response = await appointmentApi.getAvailableSlots(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => appointmentApi.getAvailableSlots(params),
     enabled: !!params.date && !!params.department,
   });
 }
 
 // Get appointment stats
-export function useAppointmentStats(params?: { 
-  startDate?: string; 
-  endDate?: string; 
-  department?: Department 
+export function useAppointmentStats(params?: {
+  startDate?: string;
+  endDate?: string;
+  department?: Department;
 }) {
   return useQuery({
     queryKey: appointmentKeys.stats(params),
-    queryFn: async () => {
-      const response = await appointmentApi.getStats(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => appointmentApi.getAppointmentStats(params),
   });
 }
 
 // Create appointment
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (data: CreateAppointmentRequest) => {
-      const response = await appointmentApi.create(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (data: CreateAppointmentRequest) =>
+      appointmentApi.createAppointment(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.stats() });
     },
   });
 }
@@ -139,19 +128,21 @@ export function useCreateAppointment() {
 // Update appointment
 export function useUpdateAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ appointmentId, data }: { 
-      appointmentId: string; 
-      data: UpdateAppointmentRequest 
-    }) => {
-      const response = await appointmentApi.update(appointmentId, data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: ({
+      appointmentId,
+      data,
+    }: {
+      appointmentId: string;
+      data: UpdateAppointmentRequest;
+    }) => appointmentApi.updateAppointment(appointmentId, data),
     onSuccess: (_, { appointmentId }) => {
-      queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
     },
   });
 }
@@ -159,16 +150,16 @@ export function useUpdateAppointment() {
 // Check-in for appointment
 export function useCheckInAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (appointmentId: string) => {
-      const response = await appointmentApi.checkIn(appointmentId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (appointmentId: string) =>
+      appointmentApi.checkInAppointment(appointmentId),
     onSuccess: (_, appointmentId) => {
-      queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
     },
   });
 }
@@ -176,16 +167,16 @@ export function useCheckInAppointment() {
 // Start appointment
 export function useStartAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (appointmentId: string) => {
-      const response = await appointmentApi.start(appointmentId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (appointmentId: string) =>
+      appointmentApi.startAppointment(appointmentId),
     onSuccess: (_, appointmentId) => {
-      queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
     },
   });
 }
@@ -193,16 +184,22 @@ export function useStartAppointment() {
 // Complete appointment
 export function useCompleteAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ appointmentId, notes }: { appointmentId: string; notes?: string }) => {
-      const response = await appointmentApi.complete(appointmentId, notes);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: ({
+      appointmentId,
+      notes,
+    }: {
+      appointmentId: string;
+      notes?: string;
+    }) => appointmentApi.completeAppointment(appointmentId, notes),
     onSuccess: (_, { appointmentId }) => {
-      queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.stats() });
     },
   });
 }
@@ -210,15 +207,83 @@ export function useCompleteAppointment() {
 // Cancel appointment
 export function useCancelAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ appointmentId, reason }: { appointmentId: string; reason?: string }) => {
-      const response = await appointmentApi.cancel(appointmentId, reason);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: ({
+      appointmentId,
+      data,
+    }: {
+      appointmentId: string;
+      data: CancelAppointmentRequest;
+    }) => appointmentApi.cancelAppointment(appointmentId, data),
     onSuccess: (_, { appointmentId }) => {
-      queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.today() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.stats() });
+    },
+  });
+}
+
+// Reschedule appointment
+export function useRescheduleAppointment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      appointmentId,
+      data,
+    }: {
+      appointmentId: string;
+      data: { appointmentDate: string; appointmentTime: string };
+    }) => appointmentApi.rescheduleAppointment(appointmentId, data),
+    onSuccess: (_, { appointmentId }) => {
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: [...appointmentKeys.all, "slots"],
+      });
+    },
+  });
+}
+
+// Mark as no-show
+export function useMarkNoShow() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (appointmentId: string) =>
+      appointmentApi.markNoShow(appointmentId),
+    onSuccess: (_, appointmentId) => {
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.stats() });
+    },
+  });
+}
+
+// Assign staff to appointment
+export function useAssignStaff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      appointmentId,
+      staffId,
+    }: {
+      appointmentId: string;
+      staffId: string;
+    }) => appointmentApi.assignStaff(appointmentId, staffId),
+    onSuccess: (_, { appointmentId }) => {
+      queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(appointmentId),
+      });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     },
   });

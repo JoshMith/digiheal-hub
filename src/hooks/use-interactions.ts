@@ -2,15 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { interactionApi } from '@/api';
 import type { 
   Interaction, 
-  StartInteractionRequest, 
+  StartInteractionRequest,
+  Department,
   PaginationParams 
 } from '@/types/api.types';
-import type { DurationPredictionRequest } from '@/api/interaction.api';
 
 // Query keys
 export const interactionKeys = {
   all: ['interactions'] as const,
-  queue: (params?: { department?: string; staffId?: string }) => 
+  lists: () => [...interactionKeys.all, 'list'] as const,
+  list: (params?: Record<string, unknown>) => [...interactionKeys.lists(), params] as const,
+  queue: (params?: { department?: Department; staffId?: string }) => 
     [...interactionKeys.all, 'queue', params] as const,
   stats: (params?: Record<string, unknown>) => [...interactionKeys.all, 'stats', params] as const,
   details: () => [...interactionKeys.all, 'detail'] as const,
@@ -19,19 +21,23 @@ export const interactionKeys = {
     [...interactionKeys.all, 'patient', patientId, params] as const,
   byStaff: (staffId: string, params?: unknown) => 
     [...interactionKeys.all, 'staff', staffId, params] as const,
-  prediction: (data: DurationPredictionRequest) => 
-    [...interactionKeys.all, 'prediction', data] as const,
+  byAppointment: (appointmentId: string) =>
+    [...interactionKeys.all, 'appointment', appointmentId] as const,
+  today: (params?: { department?: Department }) =>
+    [...interactionKeys.all, 'today', params] as const,
+  active: (params?: { department?: Department }) =>
+    [...interactionKeys.all, 'active', params] as const,
+  durationByDept: (params?: { startDate?: string; endDate?: string }) =>
+    [...interactionKeys.all, 'duration-by-dept', params] as const,
+  predictionAccuracy: (params?: { department?: Department; startDate?: string; endDate?: string }) =>
+    [...interactionKeys.all, 'prediction-accuracy', params] as const,
 };
 
 // Get current queue
-export function useInteractionQueue(params?: { department?: string; staffId?: string }) {
+export function useInteractionQueue(params?: { department?: Department; staffId?: string }) {
   return useQuery({
     queryKey: interactionKeys.queue(params),
-    queryFn: async () => {
-      const response = await interactionApi.getQueue(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => interactionApi.getActiveInteractions(params),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 }
@@ -40,15 +46,11 @@ export function useInteractionQueue(params?: { department?: string; staffId?: st
 export function useInteractionStats(params?: { 
   startDate?: string; 
   endDate?: string; 
-  department?: string 
+  department?: Department;
 }) {
   return useQuery({
     queryKey: interactionKeys.stats(params),
-    queryFn: async () => {
-      const response = await interactionApi.getStats(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => interactionApi.getInteractionStats(params),
   });
 }
 
@@ -56,12 +58,17 @@ export function useInteractionStats(params?: {
 export function useInteraction(interactionId: string) {
   return useQuery({
     queryKey: interactionKeys.detail(interactionId),
-    queryFn: async () => {
-      const response = await interactionApi.getById(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => interactionApi.getInteraction(interactionId),
     enabled: !!interactionId,
+  });
+}
+
+// Get interaction by appointment ID
+export function useInteractionByAppointment(appointmentId: string) {
+  return useQuery({
+    queryKey: interactionKeys.byAppointment(appointmentId),
+    queryFn: () => interactionApi.getInteractionByAppointment(appointmentId),
+    enabled: !!appointmentId,
   });
 }
 
@@ -69,11 +76,10 @@ export function useInteraction(interactionId: string) {
 export function usePatientInteractions(patientId: string, params?: PaginationParams) {
   return useQuery({
     queryKey: interactionKeys.byPatient(patientId, params),
-    queryFn: async () => {
-      const response = await interactionApi.getByPatient(patientId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => interactionApi.getInteractions({ 
+      patientId, 
+      ...params 
+    }),
     enabled: !!patientId,
   });
 }
@@ -81,29 +87,52 @@ export function usePatientInteractions(patientId: string, params?: PaginationPar
 // Get staff interactions
 export function useStaffInteractions(
   staffId: string, 
-  params?: PaginationParams & { date?: string }
+  params?: PaginationParams & { startDate?: string; endDate?: string }
 ) {
   return useQuery({
     queryKey: interactionKeys.byStaff(staffId, params),
-    queryFn: async () => {
-      const response = await interactionApi.getByStaff(staffId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => interactionApi.getStaffInteractions(staffId, params),
     enabled: !!staffId,
   });
 }
 
-// Get ML duration prediction
-export function useDurationPrediction(data: DurationPredictionRequest) {
+// Get today's interactions
+export function useTodayInteractions(params?: { department?: Department }) {
   return useQuery({
-    queryKey: interactionKeys.prediction(data),
-    queryFn: async () => {
-      const response = await interactionApi.predictDuration(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    enabled: !!data.department && !!data.priority && !!data.appointmentType,
+    queryKey: interactionKeys.today(params),
+    queryFn: () => interactionApi.getTodayInteractions(params),
+  });
+}
+
+// Get active (incomplete) interactions
+export function useActiveInteractions(params?: { department?: Department }) {
+  return useQuery({
+    queryKey: interactionKeys.active(params),
+    queryFn: () => interactionApi.getActiveInteractions(params),
+    refetchInterval: 15000, // Refresh every 15 seconds
+  });
+}
+
+// Get duration breakdown by department
+export function useDurationByDepartment(params?: { 
+  startDate?: string; 
+  endDate?: string 
+}) {
+  return useQuery({
+    queryKey: interactionKeys.durationByDept(params),
+    queryFn: () => interactionApi.getDurationByDepartment(params),
+  });
+}
+
+// Get prediction accuracy
+export function usePredictionAccuracy(params?: { 
+  department?: Department;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return useQuery({
+    queryKey: interactionKeys.predictionAccuracy(params),
+    queryFn: () => interactionApi.getPredictionAccuracy(params),
   });
 }
 
@@ -112,14 +141,30 @@ export function useStartInteraction() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: StartInteractionRequest) => {
-      const response = await interactionApi.start(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (data: StartInteractionRequest) => 
+      interactionApi.startInteraction(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.today() });
       queryClient.invalidateQueries({ queryKey: interactionKeys.stats() });
+    },
+  });
+}
+
+// Update interaction phase (generic)
+export function useUpdateInteractionPhase() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ interactionId, phase }: { 
+      interactionId: string; 
+      phase: 'vitals_start' | 'vitals_end' | 'interaction_start' | 'interaction_end' | 'checkout';
+    }) => interactionApi.updateInteractionPhase(interactionId, { phase }),
+    onSuccess: (_, { interactionId }) => {
+      queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
     },
   });
 }
@@ -129,14 +174,12 @@ export function useStartVitals() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (interactionId: string) => {
-      const response = await interactionApi.startVitals(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (interactionId: string) => 
+      interactionApi.startVitals(interactionId),
     onSuccess: (_, interactionId) => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
     },
   });
 }
@@ -146,48 +189,42 @@ export function useEndVitals() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (interactionId: string) => {
-      const response = await interactionApi.endVitals(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (interactionId: string) => 
+      interactionApi.endVitals(interactionId),
     onSuccess: (_, interactionId) => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
     },
   });
 }
 
-// Start consultation
+// Start doctor interaction/consultation
 export function useStartConsultation() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (interactionId: string) => {
-      const response = await interactionApi.startConsultation(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (interactionId: string) => 
+      interactionApi.startDoctorInteraction(interactionId),
     onSuccess: (_, interactionId) => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
     },
   });
 }
 
-// End consultation
+// End doctor interaction/consultation
 export function useEndConsultation() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (interactionId: string) => {
-      const response = await interactionApi.endConsultation(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (interactionId: string) => 
+      interactionApi.endDoctorInteraction(interactionId),
     onSuccess: (_, interactionId) => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
     },
   });
 }
@@ -197,15 +234,27 @@ export function useCheckout() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (interactionId: string) => {
-      const response = await interactionApi.checkout(interactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    mutationFn: (interactionId: string) => 
+      interactionApi.checkout(interactionId),
     onSuccess: (_, interactionId) => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.detail(interactionId) });
       queryClient.invalidateQueries({ queryKey: interactionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.active() });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.today() });
       queryClient.invalidateQueries({ queryKey: interactionKeys.stats() });
     },
+  });
+}
+
+// Get ML training data (admin only)
+export function useMLTrainingData(params?: {
+  startDate?: string;
+  endDate?: string;
+  minSamples?: number;
+}) {
+  return useQuery({
+    queryKey: [...interactionKeys.all, 'ml-training', params] as const,
+    queryFn: () => interactionApi.getMLTrainingData(params),
+    enabled: false, // Only fetch when explicitly requested
   });
 }

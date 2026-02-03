@@ -1,7 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode} from "react";
 import { authApi } from "@/api/auth.api";
-import { getToken, clearTokens } from "@/api/client";
+import { tokenManager } from "@/api/client";
 import { Patient, Staff, UserRole, LoginRequest, PatientRegistrationRequest, StaffRegistrationRequest} from "@/types/api.types";
+
+// Profile response type from getProfile endpoint
+interface ProfileResponse {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  lastLogin: string | null;
+  createdAt: string;
+  updatedAt: string;
+  profile?: Patient | Staff | null;
+  patient?: Patient | null;
+  staff?: Staff | null;
+}
 
 // Auth state interface
 interface AuthState {
@@ -58,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check if user is authenticated on mount
   useEffect(() => {
     const initAuth = async () => {
-      const token = getToken();
+      const token = tokenManager.getAccessToken();
 
       if (!token) {
         setState((prev) => ({ ...prev, isLoading: false }));
@@ -67,26 +81,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         const response = await authApi.getProfile();
+        const profileData = response as unknown as ProfileResponse;
 
-        if (response.success && response.data) {
-          const { data } = response;
+        if (profileData && profileData.id) {
           setState({
             user: {
-              id: data.id,
-              email: data.email,
-              role: data.role as UserRole,
+              id: profileData.id,
+              email: profileData.email,
+              role: profileData.role as UserRole,
             },
-            profile: data.profile || data.patient || data.staff || null,
+            profile: profileData.profile || profileData.patient || profileData.staff || null,
             isAuthenticated: true,
             isLoading: false,
             error: null,
           });
         } else {
-          clearTokens();
+          tokenManager.clearTokens();
           setState({ ...initialState, isLoading: false });
         }
       } catch (error) {
-        clearTokens();
+        tokenManager.clearTokens();
         setState({ ...initialState, isLoading: false });
       }
     };
@@ -101,21 +115,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authApi.login(data);
 
-      if (response.success && response.data) {
-        setState({
-          user: {
-            id: response.data.user.id,
-            email: response.data.user.email,
-            role: response.data.user.role as UserRole,
-          },
-          profile: response.data.profile,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-      } else {
-        throw new Error(response.message || "Login failed");
-      }
+      // Auth API already handles token storage in login method
+      setState({
+        user: {
+          id: response.user.id,
+          email: response.user.email,
+          role: response.user.role as UserRole,
+        },
+        profile: response.profile,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Login failed";
       setState((prev) => ({
@@ -135,29 +146,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const response = await authApi.registerPatient(data);
 
-        if (response.success && response.data) {
-          // Fetch full profile after registration
-          const profileResponse = await authApi.getProfile();
-
-          if (profileResponse.success && profileResponse.data) {
-            setState({
-              user: {
-                id: response.data.user.id,
-                email: response.data.user.email,
-                role: response.data.user.role as UserRole,
-              },
-              profile:
-                profileResponse.data.profile ||
-                profileResponse.data.patient ||
-                null,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            });
-          }
-        } else {
-          throw new Error(response.message || "Registration failed");
-        }
+        // Auth API already handles token storage in registerPatient method
+        setState({
+          user: {
+            id: response.user.id,
+            email: response.user.email,
+            role: response.user.role as UserRole,
+          },
+          profile: response.profile,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Registration failed";
@@ -179,29 +179,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authApi.registerStaff(data);
 
-      if (response.success && response.data) {
-        // Fetch full profile after registration
-        const profileResponse = await authApi.getProfile();
-
-        if (profileResponse.success && profileResponse.data) {
-          setState({
-            user: {
-              id: response.data.user.id,
-              email: response.data.user.email,
-              role: response.data.user.role as UserRole,
-            },
-            profile:
-              profileResponse.data.profile ||
-              profileResponse.data.staff ||
-              null,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
-        }
-      } else {
-        throw new Error(response.message || "Registration failed");
-      }
+      // Auth API already handles token storage in registerStaff method
+      setState({
+        user: {
+          id: response.user.id,
+          email: response.user.email,
+          role: response.user.role as UserRole,
+        },
+        profile: response.profile,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Registration failed";
@@ -221,6 +210,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await authApi.logout();
     } finally {
+      // Auth API already clears tokens in logout method
       setState({
         ...initialState,
         isLoading: false,
@@ -234,38 +224,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       const response = await authApi.getProfile();
+      const profileData = response as unknown as ProfileResponse;
 
-      if (response.success && response.data) {
+      if (profileData && profileData.id) {
         setState((prev) => ({
           ...prev,
-          profile:
-            response.data?.profile ||
-            response.data?.patient ||
-            response.data?.staff ||
-            null,
+          profile: profileData.profile || profileData.patient || profileData.staff || null,
         }));
       }
     } catch (error) {
       console.error("Failed to refresh profile:", error);
     }
   }, [state.isAuthenticated]);
-
   // Update profile
   const updateProfile = useCallback(async (data: Partial<Patient | Staff>) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await authApi.updateProfile(data);
-
-      if (response.success && response.data) {
-        setState((prev) => ({
-          ...prev,
-          profile: response.data || null,
-          isLoading: false,
-        }));
+      // Determine which update method to use based on current user role
+      let updatedProfile: Patient | Staff;
+      
+      if (state.user?.role === UserRole.PATIENT) {
+        updatedProfile = await authApi.updatePatientProfile(data);
+      } else if (state.user?.role === UserRole.STAFF || state.user?.role === UserRole.ADMIN) {
+        updatedProfile = await authApi.updateStaffProfile(data);
       } else {
-        throw new Error(response.message || "Failed to update profile");
+        throw new Error("Unable to determine profile type");
       }
+
+      setState((prev) => ({
+        ...prev,
+        profile: updatedProfile,
+        isLoading: false,
+      }));
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to update profile";
@@ -276,7 +267,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }));
       throw error;
     }
-  }, []);
+  }, [state.user?.role]);
 
   // Change password
   const changePassword = useCallback(
@@ -284,14 +275,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const response = await authApi.changePassword({
+        await authApi.changePassword({
           currentPassword,
           newPassword,
         });
-
-        if (!response.success) {
-          throw new Error(response.message || "Failed to change password");
-        }
 
         setState((prev) => ({ ...prev, isLoading: false }));
       } catch (error: unknown) {
@@ -314,9 +301,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // Computed values
-  const isPatient = state.user?.role === "PATIENT";
-  const isStaff = state.user?.role === "STAFF";
-  const isAdmin = state.user?.role === "ADMIN";
+  const isPatient = state.user?.role === UserRole.PATIENT;
+  const isStaff = state.user?.role === UserRole.STAFF;
+  const isAdmin = state.user?.role === UserRole.ADMIN;
 
   const contextValue: AuthContextType = {
     ...state,

@@ -20,7 +20,6 @@ export function useDashboardMetrics(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.dashboard(params),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });
@@ -35,7 +34,6 @@ export function usePatientFlowData(params: AnalyticsDateRange & {
     queryKey: analyticsKeys.patientFlow(params),
     queryFn: async () => {
       const response = await analyticsApi.getPatientFlow(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
     enabled: !!params.startDate && !!params.endDate,
@@ -51,7 +49,6 @@ export function useWaitTimeData(params: AnalyticsDateRange & {
     queryKey: analyticsKeys.waitTimes(params),
     queryFn: async () => {
       const response = await analyticsApi.getWaitTimes(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
     enabled: !!params.startDate && !!params.endDate,
@@ -64,7 +61,6 @@ export function useDepartmentLoad(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.departmentLoad(params),
     queryFn: async () => {
       const response = await analyticsApi.getDepartmentLoad(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });
@@ -79,7 +75,6 @@ export function useStaffPerformance(params?: AnalyticsDateRange & {
     queryKey: analyticsKeys.staffPerformance(params),
     queryFn: async () => {
       const response = await analyticsApi.getStaffPerformance(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });
@@ -91,7 +86,6 @@ export function usePredictionAccuracy(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.predictionAccuracy(params),
     queryFn: async () => {
       const response = await analyticsApi.getPredictionAccuracy(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });
@@ -103,7 +97,6 @@ export function usePeakHours(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.peakHours(params),
     queryFn: async () => {
       const response = await analyticsApi.getPeakHours(params);
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });
@@ -115,7 +108,6 @@ export function useTodayStats() {
     queryKey: analyticsKeys.dashboard(),
     queryFn: async () => {
       const response = await analyticsApi.getTodayStats();
-      if (!response.success) throw new Error(response.message);
       return response.data;
     },
   });

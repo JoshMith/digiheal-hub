@@ -1,11 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { prescriptionApi } from '@/api';
-import type { 
-  Prescription, 
+import { 
   CreatePrescriptionRequest, 
   UpdatePrescriptionRequest,
-  PaginationParams,
-  PrescriptionStatus
+  PrescriptionStatus,
+  PaginationParams
 } from '@/types/api.types';
 
 // Query keys
@@ -19,8 +18,10 @@ export const prescriptionKeys = {
     [...prescriptionKeys.all, 'patient', patientId, params] as const,
   byStaff: (staffId: string, params?: unknown) => 
     [...prescriptionKeys.all, 'staff', staffId, params] as const,
-  active: (params?: PaginationParams) => [...prescriptionKeys.all, 'active', params] as const,
-  expiring: (params?: unknown) => [...prescriptionKeys.all, 'expiring', params] as const,
+  byAppointment: (appointmentId: string) =>
+    [...prescriptionKeys.all, 'appointment', appointmentId] as const,
+  active: (patientId?: string) => [...prescriptionKeys.all, 'active', patientId] as const,
+  queue: () => [...prescriptionKeys.all, 'queue'] as const,
   stats: (params?: Record<string, unknown>) => [...prescriptionKeys.all, 'stats', params] as const,
 };
 
@@ -28,11 +29,7 @@ export const prescriptionKeys = {
 export function usePrescription(prescriptionId: string) {
   return useQuery({
     queryKey: prescriptionKeys.detail(prescriptionId),
-    queryFn: async () => {
-      const response = await prescriptionApi.getById(prescriptionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => prescriptionApi.getPrescription(prescriptionId),
     enabled: !!prescriptionId,
   });
 }
@@ -40,15 +37,15 @@ export function usePrescription(prescriptionId: string) {
 // Get patient prescriptions
 export function usePatientPrescriptions(
   patientId: string, 
-  params?: PaginationParams & { status?: PrescriptionStatus }
+  params?: {
+    page?: number;
+    limit?: number;
+    status?: PrescriptionStatus;
+  }
 ) {
   return useQuery({
     queryKey: prescriptionKeys.byPatient(patientId, params),
-    queryFn: async () => {
-      const response = await prescriptionApi.getByPatient(patientId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => prescriptionApi.getPatientPrescriptions(patientId, params),
     enabled: !!patientId,
   });
 }
@@ -57,48 +54,65 @@ export function usePatientPrescriptions(
 export function useStaffPrescriptions(staffId: string, params?: PaginationParams) {
   return useQuery({
     queryKey: prescriptionKeys.byStaff(staffId, params),
-    queryFn: async () => {
-      const response = await prescriptionApi.getByStaff(staffId, params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => prescriptionApi.getPrescriptions({ staffId, ...params }),
     enabled: !!staffId,
   });
 }
 
-// Get active prescriptions
-export function useActivePrescriptions(params?: PaginationParams) {
+// Get appointment prescriptions
+export function useAppointmentPrescriptions(appointmentId: string) {
   return useQuery({
-    queryKey: prescriptionKeys.active(params),
+    queryKey: prescriptionKeys.byAppointment(appointmentId),
+    queryFn: () => prescriptionApi.getAppointmentPrescriptions(appointmentId),
+    enabled: !!appointmentId,
+  });
+}
+
+// Get active prescriptions for a patient
+export function useActivePrescriptions(patientId?: string) {
+  return useQuery({
+    queryKey: prescriptionKeys.active(patientId),
     queryFn: async () => {
-      const response = await prescriptionApi.getActive(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
+      if (patientId) {
+        const data = await prescriptionApi.getActivePrescriptions(patientId);
+        // Convert Prescription[] to PaginatedResponse<Prescription>
+        return {
+          data,
+          meta: {
+            total: data.length,
+            page: 1,
+            limit: data.length,
+            totalPages: 1,
+          },
+          success: true,
+          message: 'Active prescriptions fetched successfully',
+        };
+      } else {
+        // This already returns PaginatedResponse<Prescription>
+        return prescriptionApi.getPrescriptions({ status: PrescriptionStatus.ACTIVE });
+      }
     },
   });
 }
 
-// Get expiring prescriptions
-export function useExpiringPrescriptions(params?: PaginationParams & { days?: number }) {
+// Get pharmacy queue
+export function usePharmacyQueue() {
   return useQuery({
-    queryKey: prescriptionKeys.expiring(params),
-    queryFn: async () => {
-      const response = await prescriptionApi.getExpiring(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryKey: prescriptionKeys.queue(),
+    queryFn: () => prescriptionApi.getPharmacyQueue(),
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 }
 
 // Get prescription stats
-export function usePrescriptionStats(params?: { startDate?: string; endDate?: string }) {
+export function usePrescriptionStats(params?: { 
+  startDate?: string; 
+  endDate?: string;
+  staffId?: string;
+}) {
   return useQuery({
     queryKey: prescriptionKeys.stats(params),
-    queryFn: async () => {
-      const response = await prescriptionApi.getStats(params);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
+    queryFn: () => prescriptionApi.getPrescriptionStats(params),
   });
 }
 
@@ -107,13 +121,16 @@ export function useCreatePrescription() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: CreatePrescriptionRequest) => {
-      const response = await prescriptionApi.create(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: () => {
+    mutationFn: (data: CreatePrescriptionRequest) => 
+      prescriptionApi.createPrescription(data),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.byPatient(data.patientId) });
+      if (data.appointmentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: prescriptionKeys.byAppointment(data.appointmentId) 
+        });
+      }
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.active() });
     },
   });
@@ -124,17 +141,14 @@ export function useUpdatePrescription() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ prescriptionId, data }: { 
+    mutationFn: ({ prescriptionId, data }: { 
       prescriptionId: string; 
       data: UpdatePrescriptionRequest 
-    }) => {
-      const response = await prescriptionApi.update(prescriptionId, data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: (_, { prescriptionId }) => {
+    }) => prescriptionApi.updatePrescription(prescriptionId, data),
+    onSuccess: (data, { prescriptionId }) => {
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.byPatient(data.patientId) });
     },
   });
 }
@@ -144,15 +158,13 @@ export function useDispensePrescription() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (prescriptionId: string) => {
-      const response = await prescriptionApi.dispense(prescriptionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: (_, prescriptionId) => {
+    mutationFn: (prescriptionId: string) => 
+      prescriptionApi.dispensePrescription(prescriptionId),
+    onSuccess: (data, prescriptionId) => {
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.queue() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active(data.patientId) });
     },
   });
 }
@@ -162,15 +174,13 @@ export function useCompletePrescription() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (prescriptionId: string) => {
-      const response = await prescriptionApi.complete(prescriptionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: (_, prescriptionId) => {
+    mutationFn: (prescriptionId: string) => 
+      prescriptionApi.completePrescription(prescriptionId),
+    onSuccess: (data, prescriptionId) => {
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active(data.patientId) });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.stats() });
     },
   });
 }
@@ -180,15 +190,58 @@ export function useCancelPrescription() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ prescriptionId, reason }: { prescriptionId: string; reason?: string }) => {
-      const response = await prescriptionApi.cancel(prescriptionId, reason);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
+    mutationFn: ({ prescriptionId, reason }: { 
+      prescriptionId: string; 
+      reason?: string 
+    }) => prescriptionApi.cancelPrescription(prescriptionId, reason),
+    onSuccess: (data, { prescriptionId }) => {
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active(data.patientId) });
     },
+  });
+}
+
+// Request refill
+export function useRequestRefill() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (prescriptionId: string) => 
+      prescriptionApi.requestRefill(prescriptionId),
+    onSuccess: (_, prescriptionId) => {
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+    },
+  });
+}
+
+// Approve refill
+export function useApproveRefill() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (prescriptionId: string) => 
+      prescriptionApi.approveRefill(prescriptionId),
+    onSuccess: (_, prescriptionId) => {
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+    },
+  });
+}
+
+// Deny refill
+export function useDenyRefill() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ prescriptionId, reason }: { 
+      prescriptionId: string; 
+      reason: string 
+    }) => prescriptionApi.denyRefill(prescriptionId, reason),
     onSuccess: (_, { prescriptionId }) => {
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.active() });
     },
   });
 }
