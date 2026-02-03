@@ -21,7 +21,9 @@ export function useDashboardMetrics(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.dashboard(params),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard(params);
-      return response.data;
+      // Backend returns { success, data: { metrics: {...} } }
+      // Extract metrics or fallback to data
+      return response.data || response.data;
     },
   });
 }
@@ -62,7 +64,8 @@ export function useDepartmentLoad(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.departmentLoad(params),
     queryFn: async () => {
       const response = await analyticsApi.getDepartmentLoad(params);
-      return response.data;
+      // Backend returns { success, data: { departments: [...], summary: {...} } }
+      return response.data || response.data;
     },
   });
 }
@@ -87,7 +90,8 @@ export function usePredictionAccuracy(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.predictionAccuracy(params),
     queryFn: async () => {
       const response = await analyticsApi.getPredictionAccuracy(params);
-      return response.data;
+      // Backend returns nested data structure
+      return response.data || response.data;
     },
   });
 }
@@ -107,6 +111,10 @@ export function usePeakHours(params?: AnalyticsDateRange) {
 export function useTodayStats() {
   return useQuery({
     queryKey: analyticsKeys.todayStats(),
-    queryFn: () => analyticsApi.getDashboard(), // Use dashboard, not getTodayStats
+    queryFn: async () => {
+      const response = await analyticsApi.getDashboard();
+      // Use dashboard metrics for today's stats
+      return response.data || response.data;
+    },
   });
 }

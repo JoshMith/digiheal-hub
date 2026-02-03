@@ -8,6 +8,16 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
   Calendar,
   Pill,
   Bell,
@@ -28,19 +38,31 @@ import {
   Ruler,
   Phone,
   MapPin,
-  Mail
+  Mail,
+  XCircle,
+  LogOut,
+  Loader2
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
 import { usePatientAppointments } from "@/hooks/use-appointments";
 import { usePatientVitalSigns, usePatientStats } from "@/hooks/use-patients";
 import { usePatientPrescriptions } from "@/hooks/use-prescriptions";
+import { useCancelAppointment } from "@/hooks/use-appointments";
+import { useLogout } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { type Patient, type Appointment, type Prescription, type VitalSigns, AppointmentStatus, PrescriptionStatus } from "@/types/api.types";
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  
   const navigate = useNavigate();
   const { profile, user } = useAuth();
+  const { toast } = useToast();
 
   // Cast profile to Patient type
   const patientProfile = profile as Patient | null;
@@ -71,6 +93,10 @@ const PatientDashboard = () => {
     error: statsError
   } = usePatientStats(patientId);
 
+  // Mutations
+  const cancelAppointmentMutation = useCancelAppointment();
+  const logoutMutation = useLogout();
+
   // Patient data with profile fallback
   const patientData = {
     name: patientProfile ? `${patientProfile.firstName} ${patientProfile.lastName}` : "Patient",
@@ -92,7 +118,6 @@ const PatientDashboard = () => {
     if (!appointmentsData) return [];
     if (Array.isArray(appointmentsData)) return appointmentsData;
     if (typeof appointmentsData === 'object' && appointmentsData !== null) {
-      // Use type assertion with proper checking
       if ('data' in appointmentsData && Array.isArray((appointmentsData as { data: unknown }).data)) {
         return (appointmentsData as { data: Appointment[] }).data;
       }
@@ -114,7 +139,6 @@ const PatientDashboard = () => {
     if (!prescriptionsData) return [];
     if (Array.isArray(prescriptionsData)) return prescriptionsData;
     if (typeof prescriptionsData === 'object' && prescriptionsData !== null) {
-      // Use type assertion with proper checking
       if ('data' in prescriptionsData && Array.isArray((prescriptionsData as { data: unknown }).data)) {
         return (prescriptionsData as { data: Prescription[] }).data;
       }
@@ -133,7 +157,6 @@ const PatientDashboard = () => {
     if (!vitalSignsData) return [];
     if (Array.isArray(vitalSignsData)) return vitalSignsData;
     if (typeof vitalSignsData === 'object' && vitalSignsData !== null) {
-      // Use type assertion with proper checking
       if ('data' in vitalSignsData && Array.isArray((vitalSignsData as { data: unknown }).data)) {
         return (vitalSignsData as { data: VitalSigns[] }).data;
       }
@@ -204,6 +227,72 @@ const PatientDashboard = () => {
     }
   };
 
+  // Handle cancel appointment
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment || !cancellationReason.trim()) {
+      toast({
+        title: "Cancellation Reason Required",
+        description: "Please provide a reason for cancellation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await cancelAppointmentMutation.mutateAsync({
+        appointmentId: selectedAppointment.id,
+        data: { cancellationReason: cancellationReason.trim() }
+      });
+
+      toast({
+        title: "Appointment Cancelled",
+        description: "Your appointment has been cancelled successfully",
+      });
+
+      setCancelDialogOpen(false);
+      setSelectedAppointment(null);
+      setCancellationReason("");
+    } catch (error: any) {
+      toast({
+        title: "Cancellation Failed",
+        description: error?.message || "Failed to cancel appointment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      
+      toast({
+        title: "Logged Out",
+        description: "You have been logged out successfully",
+      });
+
+      navigate('/auth');
+    } catch (error: any) {
+      toast({
+        title: "Logout Failed",
+        description: error?.message || "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Open cancel dialog
+  const openCancelDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setCancelDialogOpen(true);
+  };
+
+  // Check if appointment can be cancelled
+  const canCancelAppointment = (appointment: Appointment) => {
+    return appointment.status === AppointmentStatus.SCHEDULED || 
+           appointment.status === AppointmentStatus.CHECKED_IN;
+  };
+
   // Handle API errors gracefully
   const hasApiError = appointmentsError || vitalsError || prescriptionsError || statsError;
   if (hasApiError) {
@@ -247,6 +336,14 @@ const PatientDashboard = () => {
               <Button variant="outline" onClick={() => navigate("/edit-profile")} className="shadow-soft">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setLogoutDialogOpen(true)} 
+                className="shadow-soft border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
               </Button>
             </div>
           </div>
@@ -424,31 +521,44 @@ const PatientDashboard = () => {
                       </div>
                     ) : (
                       upcomingAppointments.map((apt) => (
-                        <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="text-center p-2 bg-primary/10 rounded-lg">
-                              <span className="text-xs text-muted-foreground block">
-                                {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
-                              </span>
-                              <span className="text-xl font-bold text-primary">
-                                {new Date(apt.appointmentDate).getDate()}
-                              </span>
+                        <div key={apt.id} className="p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-4">
+                              <div className="text-center p-2 bg-primary/10 rounded-lg">
+                                <span className="text-xs text-muted-foreground block">
+                                  {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
+                                </span>
+                                <span className="text-xl font-bold text-primary">
+                                  {new Date(apt.appointmentDate).getDate()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
+                                <p className="text-sm text-muted-foreground">{apt.department}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {apt.type || 'Consultation'}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
-                              <p className="text-sm text-muted-foreground">{apt.department}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {apt.type || 'Consultation'}
-                              </p>
-                            </div>
+                            <Badge variant={
+                              apt.status === AppointmentStatus.SCHEDULED ? 'default' :
+                                apt.status === AppointmentStatus.CHECKED_IN ? 'secondary' :
+                                  'outline'
+                            }>
+                              {apt.status}
+                            </Badge>
                           </div>
-                          <Badge variant={
-                            apt.status === AppointmentStatus.SCHEDULED ? 'default' :
-                              apt.status === AppointmentStatus.CHECKED_IN ? 'secondary' :
-                                'outline'
-                          }>
-                            {apt.status}
-                          </Badge>
+                          {canCancelAppointment(apt) && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                              onClick={() => openCancelDialog(apt)}
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Cancel Appointment
+                            </Button>
+                          )}
                         </div>
                       ))
                     )}
@@ -583,31 +693,44 @@ const PatientDashboard = () => {
                     </div>
                   ) : (
                     appointmentsArray.map((apt) => (
-                      <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="text-center p-2 bg-primary/10 rounded-lg">
-                            <span className="text-xs text-muted-foreground block">
-                              {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
-                            </span>
-                            <span className="text-xl font-bold text-primary">
-                              {new Date(apt.appointmentDate).getDate()}
-                            </span>
+                      <div key={apt.id} className="p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-4">
+                            <div className="text-center p-2 bg-primary/10 rounded-lg">
+                              <span className="text-xs text-muted-foreground block">
+                                {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
+                              </span>
+                              <span className="text-xl font-bold text-primary">
+                                {new Date(apt.appointmentDate).getDate()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
+                              <p className="text-sm text-muted-foreground">{apt.department}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {apt.type || 'Consultation'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
-                            <p className="text-sm text-muted-foreground">{apt.department}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {apt.type || 'Consultation'}
-                            </p>
-                          </div>
+                          <Badge variant={
+                            apt.status === AppointmentStatus.COMPLETED ? 'default' :
+                              apt.status === AppointmentStatus.CANCELLED ? 'destructive' :
+                                'outline'
+                          }>
+                            {apt.status}
+                          </Badge>
                         </div>
-                        <Badge variant={
-                          apt.status === AppointmentStatus.COMPLETED ? 'default' :
-                            apt.status === AppointmentStatus.CANCELLED ? 'destructive' :
-                              'outline'
-                        }>
-                          {apt.status}
-                        </Badge>
+                        {canCancelAppointment(apt) && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                            onClick={() => openCancelDialog(apt)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancel Appointment
+                          </Button>
+                        )}
                       </div>
                     ))
                   )}
@@ -753,6 +876,109 @@ const PatientDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Cancel Appointment Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Cancel Appointment
+            </DialogTitle>
+            <DialogDescription>
+              Please provide a reason for cancelling this appointment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedAppointment && (
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p><strong>Date:</strong> {formatDate(selectedAppointment.appointmentDate)}</p>
+                <p><strong>Time:</strong> {formatTime(selectedAppointment.appointmentTime)}</p>
+                <p><strong>Department:</strong> {selectedAppointment.department}</p>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="cancellationReason">Cancellation Reason *</Label>
+              <Textarea
+                id="cancellationReason"
+                placeholder="Please explain why you need to cancel..."
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                className="mt-2 min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setSelectedAppointment(null);
+                setCancellationReason("");
+              }}
+            >
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelAppointment}
+              disabled={cancelAppointmentMutation.isPending || !cancellationReason.trim()}
+            >
+              {cancelAppointmentMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel Appointment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5 text-destructive" />
+              Confirm Logout
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to logout? You will need to sign in again to access your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setLogoutDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

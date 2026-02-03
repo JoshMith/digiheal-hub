@@ -1,5 +1,5 @@
 // ============================================
-// DKUT Medical Center - Appointment API Service
+// DKUT Medical Center - Appointment API Service (CORRECTED)
 // ============================================
 
 import { get, post, put, patch, del } from './client';
@@ -96,7 +96,7 @@ export const cancelAppointment = async (
   appointmentId: string,
   data: CancelAppointmentRequest
 ): Promise<Appointment> => {
-  return patch<Appointment>(`/appointments/${appointmentId}/cancel`, data);
+  return del<Appointment>(`/appointments/${appointmentId}/cancel`);
 };
 
 /**
@@ -112,21 +112,39 @@ export const deleteAppointment = async (appointmentId: string): Promise<void> =>
 
 /**
  * Get all appointments with filters
+ * FIXED: Use direct params instead of nested object
  */
 export const getAppointments = async (
   params?: AppointmentQueryParams
 ): Promise<PaginatedResponse<Appointment>> => {
-  const response = await get<Appointment[]>('/appointments', { params });
-  return response as unknown as PaginatedResponse<Appointment>;
+  // Backend route: GET /appointments/patient/:patientId
+  if (params?.patientId) {
+    const { patientId, ...rest } = params;
+    return get<PaginatedResponse<Appointment>>(`/appointments/patient/${patientId}`, rest);
+  }
+  
+  // Backend route: GET /appointments/staff/:staffId
+  if (params?.staffId) {
+    const { staffId, ...rest } = params;
+    return get<PaginatedResponse<Appointment>>(`/appointments/staff/${staffId}`, rest);
+  }
+  
+  // Generic appointments list (if route exists)
+  return get<PaginatedResponse<Appointment>>('/appointments', { params });
 };
 
 /**
  * Get today's appointments
+ * FIXED: Route is /appointments/today/:department
  */
 export const getTodayAppointments = async (
   params?: TodayAppointmentsParams
 ): Promise<Appointment[]> => {
-  return get<Appointment[]>('/appointments/today', { params });
+  if (params?.department) {
+    return get<Appointment[]>(`/appointments/today/${params.department}`);
+  }
+  // If no department specified, might need to modify backend to support this
+  return get<Appointment[]>('/appointments/today/GENERAL_MEDICINE');
 };
 
 /**
@@ -144,11 +162,13 @@ export const getUpcomingAppointments = async (
 
 /**
  * Get available time slots for a specific date and department
+ * FIXED: Route is /appointments/slots with query params
  */
 export const getAvailableSlots = async (
   params: AvailableSlotsParams
 ): Promise<AvailableSlotsResponse> => {
-  return get<AvailableSlotsResponse>('/appointments/available-slots', { params });
+  // Backend expects: GET /appointments/slots?date=2024-01-01&department=GENERAL_MEDICINE
+  return get<AvailableSlotsResponse>('/appointments/slots', { params });
 };
 
 /**
@@ -166,33 +186,36 @@ export const getAvailableDates = async (
 
 /**
  * Check in patient for appointment
+ * FIXED: Route is PUT /appointments/:id/checkin
  */
 export const checkInAppointment = async (appointmentId: string): Promise<Appointment> => {
-  return patch<Appointment>(`/appointments/${appointmentId}/check-in`);
+  return put<Appointment>(`/appointments/${appointmentId}/checkin`, {});
 };
 
 /**
  * Start consultation (move to IN_PROGRESS)
+ * FIXED: Route is PUT /appointments/:id/start
  */
 export const startAppointment = async (appointmentId: string): Promise<Appointment> => {
-  return patch<Appointment>(`/appointments/${appointmentId}/start`);
+  return put<Appointment>(`/appointments/${appointmentId}/start`, {});
 };
 
 /**
  * Complete appointment
+ * FIXED: Route is PUT /appointments/:id/complete
  */
 export const completeAppointment = async (
   appointmentId: string,
   notes?: string
 ): Promise<Appointment> => {
-  return patch<Appointment>(`/appointments/${appointmentId}/complete`, { notes });
+  return put<Appointment>(`/appointments/${appointmentId}/complete`, { notes });
 };
 
 /**
  * Mark as no-show
  */
 export const markNoShow = async (appointmentId: string): Promise<Appointment> => {
-  return patch<Appointment>(`/appointments/${appointmentId}/no-show`);
+  return patch<Appointment>(`/appointments/${appointmentId}/no-show`, {});
 };
 
 /**
@@ -254,6 +277,7 @@ export const callNextPatient = async (department: Department): Promise<Appointme
 
 /**
  * Get appointment statistics
+ * FIXED: Route is GET /appointments/stats
  */
 export const getAppointmentStats = async (
   params?: AppointmentStatsParams
