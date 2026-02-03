@@ -7,6 +7,7 @@ import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
 import { FloatingTimer } from '@/components/FloatingTimer';
 import { Toaster } from '@/components/ui/toaster';
 import { Loader2 } from 'lucide-react';
+import { UserRole } from '@/types/api.types';
 
 // Lazy load pages for better performance
 const Index = lazy(() => import('@/pages/Index'));
@@ -87,7 +88,7 @@ function App() {
                 <Route
                   path="/patient-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <ProtectedRoute allowedRoles={[UserRole.PATIENT]}>
                       <PatientDashboard />
                     </ProtectedRoute>
                   }
@@ -95,7 +96,7 @@ function App() {
                 <Route
                   path="/edit-profile"
                   element={
-                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <ProtectedRoute allowedRoles={[UserRole.PATIENT]}>
                       <EditProfile />
                     </ProtectedRoute>
                   }
@@ -103,7 +104,7 @@ function App() {
                 <Route
                   path="/book-appointment"
                   element={
-                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                    <ProtectedRoute allowedRoles={[UserRole.PATIENT]}>
                       <BookAppointment />
                     </ProtectedRoute>
                   }
@@ -113,7 +114,7 @@ function App() {
                 <Route
                   path="/staff-portal"
                   element={
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.ADMIN]}>
                       <StaffPortal />
                     </ProtectedRoute>
                   }
@@ -121,7 +122,7 @@ function App() {
                 <Route
                   path="/staff-settings"
                   element={
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.ADMIN]}>
                       <StaffSettings />
                     </ProtectedRoute>
                   }
@@ -129,7 +130,7 @@ function App() {
                 <Route
                   path="/patient/:patientId"
                   element={
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.ADMIN]}>
                       <PatientDetail />
                     </ProtectedRoute>
                   }
@@ -137,7 +138,7 @@ function App() {
                 <Route
                   path="/new-patient"
                   element={
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.ADMIN]}>
                       <NewPatient />
                     </ProtectedRoute>
                   }
@@ -145,7 +146,7 @@ function App() {
                 <Route
                   path="/analytics"
                   element={
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.ADMIN]}>
                       <AnalyticsDashboard />
                     </ProtectedRoute>
                   }
@@ -153,7 +154,7 @@ function App() {
                 <Route
                   path="/admin-portal"
                   element={
-                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                    <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                       <AdminPortal />
                     </ProtectedRoute>
                   }

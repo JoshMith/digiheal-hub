@@ -404,6 +404,14 @@ export interface UpdateInteractionPhaseRequest {
   phase: 'vitals_start' | 'vitals_end' | 'interaction_start' | 'interaction_end' | 'checkout';
 }
 
+// Interaction phase type for UI (maps to backend states)
+export type InteractionPhase = 
+  | 'CHECKED_IN' 
+  | 'VITALS_IN_PROGRESS' 
+  | 'VITALS_COMPLETE' 
+  | 'INTERACTION_IN_PROGRESS' 
+  | 'COMPLETED';
+
 // ============================================
 // VITAL SIGNS
 // ============================================

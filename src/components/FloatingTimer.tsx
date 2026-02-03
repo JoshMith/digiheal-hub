@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import { useInteractionContext } from '@/context/interactionContext';
 import { useAuth } from '@/context/authContext';
-import type { InteractionPhase } from '@/types/api.types';
+import type { InteractionPhase, Interaction } from '@/types/api.types';
 
-const phaseConfig: Record<InteractionPhase, { label: string; icon: React.ReactNode; color: string }> = {
+type PhaseConfig = Record<InteractionPhase, { label: string; icon: React.ReactNode; color: string }>;
+
+const phaseConfig: PhaseConfig = {
   CHECKED_IN: { label: 'Checked In', icon: <ClipboardCheck className="h-3 w-3" />, color: 'bg-blue-500' },
   VITALS_IN_PROGRESS: { label: 'Vitals', icon: <Activity className="h-3 w-3" />, color: 'bg-yellow-500' },
   VITALS_COMPLETE: { label: 'Vitals Done', icon: <CheckCircle className="h-3 w-3" />, color: 'bg-green-500' },
@@ -40,7 +42,11 @@ export function FloatingTimer() {
 
   // Timer effect
   useEffect(() => {
-    if (!activeInteraction || activeInteraction.currentPhase === 'COMPLETED') return;
+    if (!activeInteraction) return;
+    
+    // Get current phase as InteractionPhase
+    const currentPhase = activeInteraction.currentPhase as unknown as InteractionPhase;
+    if (currentPhase === 'COMPLETED') return;
 
     const interval = setInterval(() => {
       const now = new Date();
@@ -65,7 +71,9 @@ export function FloatingTimer() {
 
   if (!activeInteraction || !isStaff) return null;
 
-  const currentPhaseConfig = phaseConfig[activeInteraction.currentPhase];
+  // Cast the current phase properly
+  const currentPhase = activeInteraction.currentPhase as unknown as InteractionPhase;
+  const currentPhaseConfig = phaseConfig[currentPhase] || phaseConfig.CHECKED_IN;
   const totalTime = activeInteraction.totalElapsed + elapsedTime;
 
   return (

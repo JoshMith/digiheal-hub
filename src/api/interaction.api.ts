@@ -162,7 +162,18 @@ export const getTodayInteractions = async (
 };
 
 /**
+ * Get the interaction queue
+ * Backend route: GET /interactions/queue
+ */
+export const getQueue = async (
+  params?: ActiveInteractionsParams
+): Promise<Interaction[]> => {
+  return get<Interaction[]>('/interactions/queue', { params });
+};
+
+/**
  * Get active (incomplete) interactions
+ * Backend route: GET /interactions/active
  */
 export const getActiveInteractions = async (
   params?: ActiveInteractionsParams
@@ -277,6 +288,7 @@ export const interactionApi = {
   // Listing
   getInteractions,
   getTodayInteractions,
+  getQueue,
   getActiveInteractions,
   getStaffInteractions,
   // Analytics

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appointmentApi } from "@/api";
+import { post } from "@/api/client";
 import type {
   Appointment,
   CreateAppointmentRequest,
@@ -8,6 +9,8 @@ import type {
   Department,
   AppointmentStatus,
   PaginationParams,
+  PredictAppointmentDurationRequest,
+  MLPredictionResponse,
 } from "@/types/api.types";
 
 // Query keys
@@ -286,5 +289,18 @@ export function useAssignStaff() {
       });
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     },
+  });
+}
+
+// Predict appointment duration using ML model
+export function usePredictDuration(params: PredictAppointmentDurationRequest) {
+  return useQuery({
+    queryKey: [...appointmentKeys.all, "predict-duration", params] as const,
+    queryFn: async () => {
+      const response = await post<MLPredictionResponse>('/appointments/predict-duration', params);
+      return response;
+    },
+    enabled: !!params.department && !!params.priority && !!params.appointmentType,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 }

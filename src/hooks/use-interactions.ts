@@ -33,11 +33,11 @@ export const interactionKeys = {
     [...interactionKeys.all, 'prediction-accuracy', params] as const,
 };
 
-// Get current queue
+// Get current queue - uses /interactions/queue endpoint
 export function useInteractionQueue(params?: { department?: Department; staffId?: string }) {
   return useQuery({
     queryKey: interactionKeys.queue(params),
-    queryFn: () => interactionApi.getActiveInteractions(params),
+    queryFn: () => interactionApi.getQueue(params),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 }
