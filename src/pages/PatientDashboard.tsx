@@ -35,7 +35,7 @@ import { useAuth } from "@/context/authContext";
 import { usePatientAppointments } from "@/hooks/use-appointments";
 import { usePatientVitalSigns, usePatientStats } from "@/hooks/use-patients";
 import { usePatientPrescriptions } from "@/hooks/use-prescriptions";
-import { type Patient, type Appointment, type Prescription, type VitalSigns, AppointmentStatus } from "@/types/api.types";
+import { type Patient, type Appointment, type Prescription, type VitalSigns, AppointmentStatus, PrescriptionStatus } from "@/types/api.types";
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -88,17 +88,13 @@ const PatientDashboard = () => {
   };
 
   // Safely get appointments array
-  const getAppointmentsArray = () => {
+  const getAppointmentsArray = (): Appointment[] => {
     if (!appointmentsData) return [];
     if (Array.isArray(appointmentsData)) return appointmentsData;
     if (typeof appointmentsData === 'object' && appointmentsData !== null) {
-      // Check if it's an ApiResponse with data array
-      if ('data' in appointmentsData && Array.isArray(appointmentsData.data)) {
-        return appointmentsData.data;
-      }
-      // Check if it's a PaginatedResponse
-      if ('data' in appointmentsData && Array.isArray((appointmentsData as any).data)) {
-        return (appointmentsData as any).data;
+      // Use type assertion with proper checking
+      if ('data' in appointmentsData && Array.isArray((appointmentsData as { data: unknown }).data)) {
+        return (appointmentsData as { data: Appointment[] }).data;
       }
     }
     return [];
@@ -108,18 +104,19 @@ const PatientDashboard = () => {
 
   // Get upcoming appointments
   const upcomingAppointments = appointmentsArray
-    .filter((apt: Appointment) =>
+    .filter((apt) =>
       apt.status === AppointmentStatus.SCHEDULED ||
       apt.status === AppointmentStatus.CHECKED_IN
     );
 
   // Safely get prescriptions array
-  const getPrescriptionsArray = () => {
+  const getPrescriptionsArray = (): Prescription[] => {
     if (!prescriptionsData) return [];
     if (Array.isArray(prescriptionsData)) return prescriptionsData;
     if (typeof prescriptionsData === 'object' && prescriptionsData !== null) {
-      if ('data' in prescriptionsData && Array.isArray(prescriptionsData.data)) {
-        return prescriptionsData.data;
+      // Use type assertion with proper checking
+      if ('data' in prescriptionsData && Array.isArray((prescriptionsData as { data: unknown }).data)) {
+        return (prescriptionsData as { data: Prescription[] }).data;
       }
     }
     return [];
@@ -129,22 +126,23 @@ const PatientDashboard = () => {
 
   // Get active medications
   const activeMedications = prescriptionsArray
-    .filter((rx: Prescription) => rx.status === 'ACTIVE' || rx.status === 'DISPENSED');
+    .filter((rx) => rx.status === PrescriptionStatus.ACTIVE || rx.status === PrescriptionStatus.DISPENSED);
 
   // Get latest vital signs
-  const getVitalSignsArray = () => {
+  const getVitalSignsArray = (): VitalSigns[] => {
     if (!vitalSignsData) return [];
     if (Array.isArray(vitalSignsData)) return vitalSignsData;
     if (typeof vitalSignsData === 'object' && vitalSignsData !== null) {
-      if ('data' in vitalSignsData && Array.isArray(vitalSignsData.data)) {
-        return vitalSignsData.data;
+      // Use type assertion with proper checking
+      if ('data' in vitalSignsData && Array.isArray((vitalSignsData as { data: unknown }).data)) {
+        return (vitalSignsData as { data: VitalSigns[] }).data;
       }
     }
     return [];
   };
 
   const vitalSignsArray = getVitalSignsArray();
-  const latestVitals = vitalSignsArray[0] as VitalSigns | undefined;
+  const latestVitals = vitalSignsArray[0];
 
   // Mock notifications (would come from notification API)
   const notifications = [
@@ -331,15 +329,12 @@ const PatientDashboard = () => {
                       ) : (
                         <p className="text-3xl font-bold text-primary">{upcomingAppointments.length}</p>
                       )}
-                      <p className="text-sm text-muted-foreground">Upcoming Appointments</p>
+                      <p className="text-sm text-muted-foreground">Upcoming</p>
                     </div>
-                    <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-soft">
-                      <Calendar className="h-6 w-6 text-primary-foreground" />
-                    </div>
+                    <Calendar className="h-10 w-10 text-primary/20" />
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="shadow-medium border-l-4 border-l-accent">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
@@ -347,200 +342,203 @@ const PatientDashboard = () => {
                       {isLoadingPrescriptions ? (
                         <Skeleton className="h-9 w-8 mb-1" />
                       ) : (
-                        <p className="text-3xl font-bold text-primary">{activeMedications.length}</p>
+                        <p className="text-3xl font-bold text-accent">{activeMedications.length}</p>
                       )}
-                      <p className="text-sm text-muted-foreground">Active Medications</p>
+                      <p className="text-sm text-muted-foreground">Active Meds</p>
                     </div>
-                    <div className="w-12 h-12 bg-gradient-health rounded-xl flex items-center justify-center shadow-soft">
-                      <Pill className="h-6 w-6 text-accent-foreground" />
-                    </div>
+                    <Pill className="h-10 w-10 text-accent/20" />
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="shadow-medium border-l-4 border-l-warning">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-3xl font-bold text-primary">{notifications.filter(n => !n.read).length}</p>
-                      <p className="text-sm text-muted-foreground">Unread Notifications</p>
+                      {isLoadingStats ? (
+                        <Skeleton className="h-9 w-8 mb-1" />
+                      ) : (
+                        <p className="text-3xl font-bold text-warning">{statsData?.totalAppointments || 0}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">Total Visits</p>
                     </div>
-                    <div className="w-12 h-12 bg-warning/20 rounded-xl flex items-center justify-center shadow-soft">
-                      <Bell className="h-6 w-6 text-warning" />
-                    </div>
+                    <Activity className="h-10 w-10 text-warning/20" />
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="shadow-medium border-l-4 border-l-success">
+              <Card className="shadow-medium border-l-4 border-l-destructive">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-3xl font-bold text-accent">Good</p>
-                      <p className="text-sm text-muted-foreground">Health Status</p>
+                      {isLoadingVitals ? (
+                        <Skeleton className="h-9 w-8 mb-1" />
+                      ) : (
+                        <p className="text-3xl font-bold text-destructive">
+                          {latestVitals?.heartRate || '--'}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground">Heart Rate</p>
                     </div>
-                    <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center shadow-soft">
-                      <CheckCircle2 className="h-6 w-6 text-accent" />
-                    </div>
+                    <Heart className="h-10 w-10 text-destructive/20" />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Health Vitals */}
-              <Card className="shadow-medium lg:col-span-2">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Heart className="h-5 w-5 text-primary" />
-                        Vital Signs
-                      </CardTitle>
-                      <CardDescription>
-                        {latestVitals
-                          ? `Last recorded: ${formatDate(latestVitals.recordedAt)}`
-                          : 'No vitals recorded yet'
-                        }
-                      </CardDescription>
-                    </div>
-                    {latestVitals && (
-                      <Badge variant="outline" className="text-accent border-accent">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Recorded
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingVitals ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Skeleton key={i} className="h-24 rounded-xl" />
-                      ))}
-                    </div>
-                  ) : latestVitals ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="h-4 w-4 text-primary" />
-                          <span className="text-xs text-muted-foreground">Blood Pressure</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.bloodPressureSystolic}/{latestVitals.bloodPressureDiastolic}
-                        </p>
-                        <p className="text-xs text-accent">mmHg</p>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Heart className="h-4 w-4 text-destructive" />
-                          <span className="text-xs text-muted-foreground">Heart Rate</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.heartRate} <span className="text-sm font-normal">bpm</span>
-                        </p>
-                        <p className="text-xs text-accent">Normal</p>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Thermometer className="h-4 w-4 text-warning" />
-                          <span className="text-xs text-muted-foreground">Temperature</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.temperature}<span className="text-sm font-normal">°C</span>
-                        </p>
-                        <p className="text-xs text-accent">Normal</p>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Droplets className="h-4 w-4 text-primary" />
-                          <span className="text-xs text-muted-foreground">Blood Oxygen</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.oxygenSaturation}<span className="text-sm font-normal">%</span>
-                        </p>
-                        <p className="text-xs text-accent">Excellent</p>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Scale className="h-4 w-4 text-accent" />
-                          <span className="text-xs text-muted-foreground">Weight</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.weight}<span className="text-sm font-normal">kg</span>
-                        </p>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Ruler className="h-4 w-4 text-accent" />
-                          <span className="text-xs text-muted-foreground">Height</span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          {latestVitals.height}<span className="text-sm font-normal">cm</span>
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Heart className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No vital signs recorded yet</p>
-                      <p className="text-sm">Visit the clinic to have your vitals recorded</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Appointments Preview */}
+            {/* Two Column Layout */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Upcoming Appointments Card */}
               <Card className="shadow-medium">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      Upcoming
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={() => setActiveTab("appointments")}>
-                      View All
-                    </Button>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Upcoming Appointments
                   </CardTitle>
+                  <CardDescription>
+                    {isLoadingAppointments
+                      ? 'Loading...'
+                      : `${upcomingAppointments.length} scheduled appointments`
+                    }
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[250px]">
+                  <ScrollArea className="h-[300px]">
                     {isLoadingAppointments ? (
-                      Array.from({ length: 2 }).map((_, i) => (
-                        <div key={i} className="p-3 mb-2 border rounded-lg">
-                          <Skeleton className="h-4 w-24 mb-2" />
-                          <Skeleton className="h-3 w-32" />
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="p-4 mb-3 border rounded-lg">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-48 mb-1" />
+                          <Skeleton className="h-3 w-24" />
                         </div>
                       ))
-                    ) : upcomingAppointments.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No upcoming appointments</p>
+                    ) : !upcomingAppointments.length ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg mb-2">No upcoming appointments</p>
+                        <p className="text-sm mb-4">Book an appointment to get started</p>
                         <Link to="/book-appointment">
-                          <Button size="sm" variant="outline" className="mt-2">
+                          <Button size="sm" className="bg-accent hover:bg-accent-hover">
+                            <Plus className="mr-2 h-4 w-4" />
                             Book Now
                           </Button>
                         </Link>
                       </div>
                     ) : (
-                      upcomingAppointments.slice(0, 3).map((apt: Appointment) => (
-                        <div key={apt.id} className="p-3 mb-2 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="font-medium">{formatDate(apt.appointmentDate)}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {apt.status}
-                            </Badge>
+                      upcomingAppointments.map((apt) => (
+                        <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="text-center p-2 bg-primary/10 rounded-lg">
+                              <span className="text-xs text-muted-foreground block">
+                                {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
+                              </span>
+                              <span className="text-xl font-bold text-primary">
+                                {new Date(apt.appointmentDate).getDate()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{formatTime(apt.appointmentTime)}</p>
+                              <p className="text-sm text-muted-foreground">{apt.department}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {apt.type || 'Consultation'}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {formatTime(apt.appointmentTime)} • {apt.department}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {apt.type || 'General Consultation'}
-                          </p>
+                          <Badge variant={
+                            apt.status === AppointmentStatus.SCHEDULED ? 'default' :
+                              apt.status === AppointmentStatus.CHECKED_IN ? 'secondary' :
+                                'outline'
+                          }>
+                            {apt.status}
+                          </Badge>
                         </div>
                       ))
                     )}
                   </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Health Snapshot Card */}
+              <Card className="shadow-medium">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" />
+                    Health Snapshot
+                  </CardTitle>
+                  <CardDescription>Your latest vital signs</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingVitals ? (
+                    <div className="space-y-4">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-6 w-16" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : !latestVitals ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Activity className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg mb-2">No vital signs recorded</p>
+                      <p className="text-sm">Vitals will be recorded during your next visit</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
+                            <Heart className="h-5 w-5 text-destructive" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Heart Rate</p>
+                            <p className="text-lg font-semibold">{latestVitals.heartRate || '--'} bpm</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={getStatusColor('normal')}>Normal</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Activity className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Blood Pressure</p>
+                            <p className="text-lg font-semibold">
+                              {latestVitals.bloodPressureSystolic || '--'}/{latestVitals.bloodPressureDiastolic || '--'} mmHg
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={getStatusColor('normal')}>Normal</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center">
+                            <Thermometer className="h-5 w-5 text-warning" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Temperature</p>
+                            <p className="text-lg font-semibold">{latestVitals.temperature || '--'}°C</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={getStatusColor('normal')}>Normal</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center">
+                            <Scale className="h-5 w-5 text-accent" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Weight</p>
+                            <p className="text-lg font-semibold">{latestVitals.weight || '--'} kg</p>
+                          </div>
+                        </div>
+                      </div>
+                      {latestVitals.recordedAt && (
+                        <p className="text-xs text-muted-foreground text-center mt-4">
+                          Last updated: {formatDate(latestVitals.recordedAt)}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -550,38 +548,25 @@ const PatientDashboard = () => {
           <TabsContent value="appointments" className="space-y-6">
             <Card className="shadow-medium">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      Your Appointments
-                    </CardTitle>
-                    <CardDescription>
-                      {isLoadingAppointments
-                        ? 'Loading...'
-                        : `${appointmentsArray.length || 0} total appointments`
-                      }
-                    </CardDescription>
-                  </div>
-                  <Link to="/book-appointment">
-                    <Button className="bg-accent hover:bg-accent-hover text-accent-foreground">
-                      <Plus className="mr-2 h-4 w-4" />
-                      New Appointment
-                    </Button>
-                  </Link>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  All Appointments
+                </CardTitle>
+                <CardDescription>
+                  {isLoadingAppointments
+                    ? 'Loading...'
+                    : `${appointmentsArray.length} total appointments`
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[400px]">
                   {isLoadingAppointments ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 mb-3 border rounded-lg">
-                        <Skeleton className="w-16 h-16 rounded-lg" />
-                        <div className="flex-1">
-                          <Skeleton className="h-4 w-32 mb-2" />
-                          <Skeleton className="h-3 w-48" />
-                        </div>
-                        <Skeleton className="h-6 w-20" />
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="p-4 mb-3 border rounded-lg">
+                        <Skeleton className="h-5 w-32 mb-2" />
+                        <Skeleton className="h-4 w-48 mb-1" />
+                        <Skeleton className="h-3 w-24" />
                       </div>
                     ))
                   ) : !appointmentsArray.length ? (
@@ -590,16 +575,19 @@ const PatientDashboard = () => {
                       <p className="text-lg mb-2">No appointments yet</p>
                       <p className="text-sm mb-4">Book your first appointment to get started</p>
                       <Link to="/book-appointment">
-                        <Button>Book Appointment</Button>
+                        <Button className="bg-accent hover:bg-accent-hover">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Book Appointment
+                        </Button>
                       </Link>
                     </div>
                   ) : (
-                    appointmentsArray.map((apt: Appointment) => (
+                    appointmentsArray.map((apt) => (
                       <div key={apt.id} className="flex items-center justify-between p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 bg-primary/10 rounded-lg flex flex-col items-center justify-center">
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(apt.appointmentDate).toLocaleDateString('en-US', { month: 'short' })}
+                          <div className="text-center p-2 bg-primary/10 rounded-lg">
+                            <span className="text-xs text-muted-foreground block">
+                              {new Date(apt.appointmentDate).toLocaleString('en-US', { month: 'short' })}
                             </span>
                             <span className="text-xl font-bold text-primary">
                               {new Date(apt.appointmentDate).getDate()}
@@ -614,8 +602,8 @@ const PatientDashboard = () => {
                           </div>
                         </div>
                         <Badge variant={
-                          apt.status === 'COMPLETED' ? 'default' :
-                            apt.status === 'CANCELLED' ? 'destructive' :
+                          apt.status === AppointmentStatus.COMPLETED ? 'default' :
+                            apt.status === AppointmentStatus.CANCELLED ? 'destructive' :
                               'outline'
                         }>
                           {apt.status}
@@ -660,7 +648,7 @@ const PatientDashboard = () => {
                       <p className="text-sm">Your prescriptions will appear here after a consultation</p>
                     </div>
                   ) : (
-                    prescriptionsArray.map((rx: Prescription) => (
+                    prescriptionsArray.map((rx) => (
                       <div key={rx.id} className="p-4 mb-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-start justify-between">
                           <div>
@@ -678,9 +666,9 @@ const PatientDashboard = () => {
                             )}
                           </div>
                           <Badge variant={
-                            rx.status === 'ACTIVE' ? 'default' :
-                              rx.status === 'DISPENSED' ? 'secondary' :
-                                rx.status === 'COMPLETED' ? 'outline' :
+                            rx.status === PrescriptionStatus.ACTIVE ? 'default' :
+                              rx.status === PrescriptionStatus.DISPENSED ? 'secondary' :
+                                rx.status === PrescriptionStatus.COMPLETED ? 'outline' :
                                   'destructive'
                           }>
                             {rx.status}
