@@ -13,6 +13,57 @@ import type {
 } from '../types/api.types';
 
 // ============================================
+// TYPES
+// ============================================
+
+export interface InteractionQueryParams {
+  department?: Department;
+  staffId?: string;
+  patientId?: string;
+  startDate?: string;
+  endDate?: string;
+  completed?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface TodayInteractionsParams {
+  department?: Department;
+}
+
+export interface ActiveInteractionsParams {
+  department?: Department;
+}
+
+export interface StaffInteractionsParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface InteractionStatsParams {
+  department?: Department;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface DurationByDepartmentParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PredictionAccuracyParams {
+  department?: Department;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface MLTrainingDataParams {
+  startDate?: string;
+  endDate?: string;
+  minSamples?: number;
+}
+
+// ============================================
 // INTERACTION LIFECYCLE
 // ============================================
 
@@ -94,36 +145,29 @@ export const checkout = async (interactionId: string): Promise<Interaction> => {
 /**
  * Get all interactions with filters
  */
-export const getInteractions = async (params?: {
-  department?: Department;
-  staffId?: string;
-  patientId?: string;
-  startDate?: string;
-  endDate?: string;
-  completed?: boolean;
-  page?: number;
-  limit?: number;
-}): Promise<PaginatedResponse<Interaction>> => {
-  const response = await get<Interaction[]>('/interactions', params);
+export const getInteractions = async (
+  params?: InteractionQueryParams
+): Promise<PaginatedResponse<Interaction>> => {
+  const response = await get<Interaction[]>('/interactions', { params });
   return response as unknown as PaginatedResponse<Interaction>;
 };
 
 /**
  * Get today's interactions
  */
-export const getTodayInteractions = async (params?: {
-  department?: Department;
-}): Promise<Interaction[]> => {
-  return get<Interaction[]>('/interactions/today', params);
+export const getTodayInteractions = async (
+  params?: TodayInteractionsParams
+): Promise<Interaction[]> => {
+  return get<Interaction[]>('/interactions/today', { params });
 };
 
 /**
  * Get active (incomplete) interactions
  */
-export const getActiveInteractions = async (params?: {
-  department?: Department;
-}): Promise<Interaction[]> => {
-  return get<Interaction[]>('/interactions/active', params);
+export const getActiveInteractions = async (
+  params?: ActiveInteractionsParams
+): Promise<Interaction[]> => {
+  return get<Interaction[]>('/interactions/active', { params });
 };
 
 /**
@@ -131,9 +175,9 @@ export const getActiveInteractions = async (params?: {
  */
 export const getStaffInteractions = async (
   staffId: string,
-  params?: { startDate?: string; endDate?: string }
+  params?: StaffInteractionsParams
 ): Promise<Interaction[]> => {
-  return get<Interaction[]>(`/staff/${staffId}/interactions`, params);
+  return get<Interaction[]>(`/staff/${staffId}/interactions`, { params });
 };
 
 // ============================================
@@ -143,27 +187,24 @@ export const getStaffInteractions = async (
 /**
  * Get interaction duration statistics
  */
-export const getInteractionStats = async (params?: {
-  department?: Department;
-  startDate?: string;
-  endDate?: string;
-}): Promise<{
+export const getInteractionStats = async (
+  params?: InteractionStatsParams
+): Promise<{
   totalInteractions: number;
   avgVitalsDuration: number;
   avgInteractionDuration: number;
   avgTotalDuration: number;
   completedCount: number;
 }> => {
-  return get('/interactions/stats', params);
+  return get('/interactions/stats', { params });
 };
 
 /**
  * Get duration breakdown by department
  */
-export const getDurationByDepartment = async (params?: {
-  startDate?: string;
-  endDate?: string;
-}): Promise<
+export const getDurationByDepartment = async (
+  params?: DurationByDepartmentParams
+): Promise<
   Array<{
     department: Department;
     avgVitalsDuration: number;
@@ -172,17 +213,15 @@ export const getDurationByDepartment = async (params?: {
     count: number;
   }>
 > => {
-  return get('/interactions/stats/by-department', params);
+  return get('/interactions/stats/by-department', { params });
 };
 
 /**
  * Get prediction accuracy data
  */
-export const getPredictionAccuracy = async (params?: {
-  department?: Department;
-  startDate?: string;
-  endDate?: string;
-}): Promise<{
+export const getPredictionAccuracy = async (
+  params?: PredictionAccuracyParams
+): Promise<{
   overallAccuracy: number;
   totalSamples: number;
   avgError: number;
@@ -192,7 +231,7 @@ export const getPredictionAccuracy = async (params?: {
     percentage: number;
   }>;
 }> => {
-  return get('/interactions/prediction-accuracy', params);
+  return get('/interactions/prediction-accuracy', { params });
 };
 
 // ============================================
@@ -202,11 +241,9 @@ export const getPredictionAccuracy = async (params?: {
 /**
  * Get interaction data for ML training (admin only)
  */
-export const getMLTrainingData = async (params?: {
-  startDate?: string;
-  endDate?: string;
-  minSamples?: number;
-}): Promise<{
+export const getMLTrainingData = async (
+  params?: MLTrainingDataParams
+): Promise<{
   data: Array<{
     department: Department;
     priority: string;
@@ -218,7 +255,7 @@ export const getMLTrainingData = async (params?: {
   }>;
   totalRecords: number;
 }> => {
-  return get('/interactions/ml-training-data', params);
+  return get('/interactions/ml-training-data', { params });
 };
 
 // ============================================

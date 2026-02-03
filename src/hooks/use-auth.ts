@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/api/auth.api';
-import { getToken, clearTokens } from '@/api/client';
+import { tokenManager } from '@/api/client';
 import { LoginRequest, PatientRegistrationRequest, StaffRegistrationRequest, ChangePasswordRequest, Patient, Staff} from '@/types/api.types';
 
 // Query keys
@@ -22,7 +22,7 @@ export function useProfile() {
       }
       return response.data;
     },
-    enabled: !!getToken(),
+    enabled: !!tokenManager.getAccessToken(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
@@ -37,10 +37,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: async (data: LoginRequest) => {
       const response = await authApi.login(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Login failed');
-      }
-      return response.data;
+
+      return response;
     },
     onSuccess: () => {
       // Invalidate and refetch profile
@@ -58,10 +56,8 @@ export function usePatientRegistration() {
   return useMutation({
     mutationFn: async (data: PatientRegistrationRequest) => {
       const response = await authApi.registerPatient(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Registration failed');
-      }
-      return response.data;
+  
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: authKeys.profile() });
@@ -78,10 +74,8 @@ export function useStaffRegistration() {
   return useMutation({
     mutationFn: async (data: StaffRegistrationRequest) => {
       const response = await authApi.registerStaff(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Registration failed');
-      }
-      return response.data;
+      
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: authKeys.profile() });
@@ -105,7 +99,7 @@ export function useLogout() {
     },
     onError: () => {
       // Even on error, clear tokens and queries
-      clearTokens();
+      tokenManager.clearTokens();
       queryClient.clear();
     },
   });
@@ -114,16 +108,29 @@ export function useLogout() {
 /**
  * Hook for updating profile
  */
-export function useUpdateProfile() {
+export function useUpdatePatientProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: Partial<Patient | Staff>) => {
-      const response = await authApi.updateProfile(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to update profile');
-      }
-      return response.data;
+      const response = await authApi.updatePatientProfile(data);
+      
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.profile() });
+    },
+  });
+}
+
+export function useUpdateStaffProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: Partial<Patient | Staff>) => {
+      const response = await authApi.updateStaffProfile(data);
+      
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: authKeys.profile() });
@@ -138,45 +145,8 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: ChangePasswordRequest) => {
       const response = await authApi.changePassword(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to change password');
-      }
+      
       return response;
-    },
-  });
-}
-
-/**
- * Hook for deactivating account
- */
-export function useDeactivateAccount() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (password: string) => {
-      const response = await authApi.deactivateAccount(password);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to deactivate account');
-      }
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.clear();
-    },
-  });
-}
-
-/**
- * Hook for changing user role (Admin only)
- */
-export function useChangeUserRole() {
-  return useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: 'PATIENT' | 'STAFF' | 'ADMIN' }) => {
-      const response = await authApi.changeUserRole(userId, newRole);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to change user role');
-      }
-      return response.data;
     },
   });
 }

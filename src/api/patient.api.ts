@@ -12,7 +12,64 @@ import type {
   Prescription,
   Notification,
   PaginatedResponse,
+  PaginationParams,
 } from '../types/api.types';
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface PatientSearchParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PatientVitalsParams {
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PatientAppointmentsParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  upcoming?: boolean;
+}
+
+export interface PatientPrescriptionsParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
+export interface PatientNotificationsParams {
+  page?: number;
+  limit?: number;
+  unreadOnly?: boolean;
+}
+
+export interface PatientStatsResponse {
+  totalAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  upcomingAppointments: number;
+  lastVisit: string | null;
+  activePrescriptions: number;
+  totalPrescriptions: number;
+}
+
+export interface PatientMedicalHistoryResponse {
+  appointments: Appointment[];
+  prescriptions: Prescription[];
+  vitalSigns: VitalSigns[];
+}
 
 // ============================================
 // PATIENT ENDPOINTS
@@ -45,27 +102,30 @@ export const updatePatient = async (
 /**
  * Search patients (staff/admin only)
  */
-export const searchPatients = async (params: {
-  search?: string;
-  page?: number;
-  limit?: number;
-}): Promise<PaginatedResponse<Patient>> => {
-  const response = await get<Patient[]>('/patients', params);
-  // Note: Backend should return PaginatedResponse, adjust if needed
+export const searchPatients = async (
+  params: PatientSearchParams
+): Promise<PaginatedResponse<Patient>> => {
+  const response = await get<Patient[]>('/patients', { params });
   return response as unknown as PaginatedResponse<Patient>;
 };
 
 /**
  * Get all patients (staff/admin only)
  */
-export const getAllPatients = async (params?: {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}): Promise<PaginatedResponse<Patient>> => {
-  const response = await get<Patient[]>('/patients', params);
+export const getAllPatients = async (
+  params?: PatientSearchParams
+): Promise<PaginatedResponse<Patient>> => {
+  const response = await get<Patient[]>('/patients', { params });
   return response as unknown as PaginatedResponse<Patient>;
+};
+
+/**
+ * Create new patient (staff/admin only)
+ */
+export const createPatient = async (
+  data: Partial<Patient>
+): Promise<Patient> => {
+  return post<Patient>('/patients', data);
 };
 
 // ============================================
@@ -77,9 +137,9 @@ export const getAllPatients = async (params?: {
  */
 export const getPatientVitals = async (
   patientId: string,
-  params?: { page?: number; limit?: number }
+  params?: PatientVitalsParams
 ): Promise<VitalSigns[]> => {
-  return get<VitalSigns[]>(`/patients/${patientId}/vitals`, params);
+  return get<VitalSigns[]>(`/patients/${patientId}/vitals`, { params });
 };
 
 /**
@@ -108,25 +168,18 @@ export const createVitalSigns = async (
  */
 export const getPatientAppointments = async (
   patientId: string,
-  params?: {
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    limit?: number;
-  }
+  params?: PatientAppointmentsParams
 ): Promise<Appointment[]> => {
-  return get<Appointment[]>(`/patients/${patientId}/appointments`, params);
+  return get<Appointment[]>(`/patients/${patientId}/appointments`, { params });
 };
 
 /**
  * Get my appointments (for logged-in patient)
  */
-export const getMyAppointments = async (params?: {
-  status?: string;
-  upcoming?: boolean;
-}): Promise<Appointment[]> => {
-  return get<Appointment[]>('/patients/me/appointments', params);
+export const getMyAppointments = async (
+  params?: PatientAppointmentsParams
+): Promise<Appointment[]> => {
+  return get<Appointment[]>('/patients/me/appointments', { params });
 };
 
 // ============================================
@@ -138,22 +191,18 @@ export const getMyAppointments = async (params?: {
  */
 export const getPatientPrescriptions = async (
   patientId: string,
-  params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }
+  params?: PatientPrescriptionsParams
 ): Promise<Prescription[]> => {
-  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, params);
+  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params });
 };
 
 /**
  * Get my prescriptions (for logged-in patient)
  */
-export const getMyPrescriptions = async (params?: {
-  status?: string;
-}): Promise<Prescription[]> => {
-  return get<Prescription[]>('/patients/me/prescriptions', params);
+export const getMyPrescriptions = async (
+  params?: PatientPrescriptionsParams
+): Promise<Prescription[]> => {
+  return get<Prescription[]>('/patients/me/prescriptions', { params });
 };
 
 // ============================================
@@ -165,22 +214,18 @@ export const getMyPrescriptions = async (params?: {
  */
 export const getPatientNotifications = async (
   patientId: string,
-  params?: {
-    unreadOnly?: boolean;
-    page?: number;
-    limit?: number;
-  }
+  params?: PatientNotificationsParams
 ): Promise<Notification[]> => {
-  return get<Notification[]>(`/patients/${patientId}/notifications`, params);
+  return get<Notification[]>(`/patients/${patientId}/notifications`, { params });
 };
 
 /**
  * Get my notifications (for logged-in patient)
  */
-export const getMyNotifications = async (params?: {
-  unreadOnly?: boolean;
-}): Promise<Notification[]> => {
-  return get<Notification[]>('/patients/me/notifications', params);
+export const getMyNotifications = async (
+  params?: PatientNotificationsParams
+): Promise<Notification[]> => {
+  return get<Notification[]>('/patients/me/notifications', { params });
 };
 
 /**
@@ -204,12 +249,17 @@ export const markAllNotificationsRead = async (): Promise<void> => {
 /**
  * Get patient's medical history
  */
-export const getPatientMedicalHistory = async (patientId: string): Promise<{
-  appointments: Appointment[];
-  prescriptions: Prescription[];
-  vitalSigns: VitalSigns[];
-}> => {
-  return get(`/patients/${patientId}/medical-history`);
+export const getPatientMedicalHistory = async (
+  patientId: string
+): Promise<PatientMedicalHistoryResponse> => {
+  return get<PatientMedicalHistoryResponse>(`/patients/${patientId}/medical-history`);
+};
+
+/**
+ * Get patient statistics
+ */
+export const getPatientStats = async (patientId: string): Promise<PatientStatsResponse> => {
+  return get<PatientStatsResponse>(`/patients/${patientId}/stats`);
 };
 
 // ============================================
@@ -220,6 +270,7 @@ export const patientApi = {
   getPatient,
   getMyProfile,
   updatePatient,
+  createPatient,
   searchPatients,
   getAllPatients,
   getPatientVitals,
@@ -234,6 +285,7 @@ export const patientApi = {
   markNotificationRead,
   markAllNotificationsRead,
   getPatientMedicalHistory,
+  getPatientStats,
 };
 
 export default patientApi;

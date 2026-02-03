@@ -12,6 +12,7 @@ import type {
   Patient,
   Staff,
   User,
+  ApiResponse
 } from '../types/api.types';
 
 // ============================================
@@ -62,8 +63,8 @@ export const logout = async (): Promise<void> => {
 /**
  * Get current user profile
  */
-export const getProfile = async (): Promise<{ user: User; profile: Patient | Staff | null }> => {
-  return get<{ user: User; profile: Patient | Staff | null }>('/auth/profile');
+export const getProfile = async (): Promise<ApiResponse> => {
+  return get<ApiResponse>('/auth/profile');
 };
 
 /**

@@ -451,39 +451,36 @@ export interface CreateNotificationRequest {
 // ============================================
 // ML SERVICE
 // ============================================
-
-export interface MLPredictionRequest {
-  department: Department;
-  priority: PriorityLevel;
-  appointmentType: AppointmentType;
+export interface PredictAppointmentDurationRequest {
+  department: 'GENERAL_MEDICINE' | 'EMERGENCY' | 'PEDIATRICS' | 'MENTAL_HEALTH' | 'DENTAL' | 'PHARMACY' | 'LABORATORY';
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  appointmentType: 'WALK_IN' | 'SCHEDULED' | 'FOLLOW_UP' | 'EMERGENCY' | 'ROUTINE_CHECKUP';
   symptomCount?: number;
-  timeOfDay?: number;
-  dayOfWeek?: number;
+  timeOfDay?: number; // 0-23 (hour of day)
+  dayOfWeek?: number; // 0-6 (0=Sunday, 6=Saturday)
 }
 
 export interface MLPredictionResponse {
-  predictedDuration: number;
-  confidence: number;
+  predictedDuration: number; // in minutes
+  confidence: number; // 0.0 - 1.0
   modelVersion: string;
+  modelType: 'ml-trained' | 'heuristic' | 'heuristic-fallback' | 'fallback' | string;
+  error?: string; // Only present if fallback used
 }
 
-export interface HealthAssessmentRequest {
-  symptoms: string[];
-  age?: number;
-  gender?: Gender;
-  duration?: string;
-  severity?: 'MILD' | 'MODERATE' | 'SEVERE';
-  additionalNotes?: string;
+export interface PredictionSuggestions {
+  recommendedDuration: number;
+  bufferTime: number; // extra buffer time in minutes
+  totalTimeSlot: number; // recommendedDuration + bufferTime
+  confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  note?: string;
 }
 
-export interface HealthAssessmentResponse {
-  id: string;
-  riskScore: number;
-  urgencyLevel: PriorityLevel;
-  recommendedDepartment: Department;
-  possibleConditions: string[];
-  recommendations: string[];
-  confidence: number;
+export interface PredictAppointmentDurationResponse {
+  success: boolean;
+  data: MLPredictionResponse;
+  message?: string;
+  suggestions?: PredictionSuggestions;
 }
 
 // ============================================
@@ -560,4 +557,9 @@ export interface QueueResponse {
   totalInQueue: number;
   avgWaitTime: number;
   nextEstimatedCall: string | null;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
 }

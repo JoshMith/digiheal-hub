@@ -275,15 +275,4 @@ export async function del<T>(url: string): Promise<T> {
   }
 }
 
-<<<<<<< HEAD
 export default apiClient;
-=======
-  patch: <T>(endpoint: string, body?: unknown) =>
-    fetchApi<T>(endpoint, { method: 'PATCH', body }),
-
-  delete: <T>(endpoint: string, body?: unknown) =>
-    fetchApi<T>(endpoint, { method: 'DELETE', body }),
-};
-
-export default api;
->>>>>>> e6e6ddedae4b586329dbb3b3e3265dafeeabdb16

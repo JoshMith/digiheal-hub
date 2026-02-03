@@ -12,6 +12,32 @@ import type {
 } from '../types/api.types';
 
 // ============================================
+// TYPES
+// ============================================
+
+export interface PrescriptionQueryParams {
+  patientId?: string;
+  staffId?: string;
+  status?: PrescriptionStatus;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PatientPrescriptionsParams {
+  status?: PrescriptionStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface PrescriptionStatsParams {
+  startDate?: string;
+  endDate?: string;
+  staffId?: string;
+}
+
+// ============================================
 // PRESCRIPTION CRUD
 // ============================================
 
@@ -46,16 +72,10 @@ export const updatePrescription = async (
 /**
  * Get all prescriptions with filters
  */
-export const getPrescriptions = async (params?: {
-  patientId?: string;
-  staffId?: string;
-  status?: PrescriptionStatus;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  limit?: number;
-}): Promise<PaginatedResponse<Prescription>> => {
-  const response = await get<Prescription[]>('/prescriptions', params);
+export const getPrescriptions = async (
+  params?: PrescriptionQueryParams
+): Promise<PaginatedResponse<Prescription>> => {
+  const response = await get<Prescription[]>('/prescriptions', { params });
   return response as unknown as PaginatedResponse<Prescription>;
 };
 
@@ -64,13 +84,9 @@ export const getPrescriptions = async (params?: {
  */
 export const getPatientPrescriptions = async (
   patientId: string,
-  params?: {
-    status?: PrescriptionStatus;
-    page?: number;
-    limit?: number;
-  }
+  params?: PatientPrescriptionsParams
 ): Promise<Prescription[]> => {
-  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, params);
+  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params });
 };
 
 /**
@@ -159,18 +175,16 @@ export const denyRefill = async (
 /**
  * Get prescription statistics
  */
-export const getPrescriptionStats = async (params?: {
-  startDate?: string;
-  endDate?: string;
-  staffId?: string;
-}): Promise<{
+export const getPrescriptionStats = async (
+  params?: PrescriptionStatsParams
+): Promise<{
   totalPrescribed: number;
   totalDispensed: number;
   totalActive: number;
   totalExpired: number;
   topMedications: Array<{ name: string; count: number }>;
 }> => {
-  return get('/prescriptions/stats', params);
+  return get('/prescriptions/stats', { params });
 };
 
 // ============================================

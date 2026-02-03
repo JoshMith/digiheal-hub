@@ -12,11 +12,58 @@ import type {
   Department,
   AppointmentStatus,
   PaginatedResponse,
+  PredictAppointmentDurationRequest,
 } from '../types/api.types';
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface AppointmentQueryParams {
+  date?: string;
+  department?: Department;
+  status?: AppointmentStatus;
+  patientId?: string;
+  staffId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TodayAppointmentsParams {
+  department?: Department;
+  status?: AppointmentStatus;
+}
+
+export interface UpcomingAppointmentsParams {
+  days?: number;
+  department?: Department;
+}
+
+export interface AvailableSlotsParams {
+  date: string;
+  department: Department;
+  staffId?: string;
+  duration?: number;
+}
+
+export interface AvailableDatesParams {
+  department: Department;
+  days?: number;
+}
+
+export interface AppointmentStatsParams {
+  startDate?: string;
+  endDate?: string;
+  department?: Department;
+}
 
 // ============================================
 // APPOINTMENT CRUD
 // ============================================
+
+export const predictAppointmentDuration = async (data: PredictAppointmentDurationRequest): Promise<Appointment> => {
+  return post<Appointment>('/predict-duration', data);
+};
 
 /**
  * Create a new appointment
@@ -66,37 +113,29 @@ export const deleteAppointment = async (appointmentId: string): Promise<void> =>
 /**
  * Get all appointments with filters
  */
-export const getAppointments = async (params?: {
-  date?: string;
-  department?: Department;
-  status?: AppointmentStatus;
-  patientId?: string;
-  staffId?: string;
-  page?: number;
-  limit?: number;
-}): Promise<PaginatedResponse<Appointment>> => {
-  const response = await get<Appointment[]>('/appointments', params);
+export const getAppointments = async (
+  params?: AppointmentQueryParams
+): Promise<PaginatedResponse<Appointment>> => {
+  const response = await get<Appointment[]>('/appointments', { params });
   return response as unknown as PaginatedResponse<Appointment>;
 };
 
 /**
  * Get today's appointments
  */
-export const getTodayAppointments = async (params?: {
-  department?: Department;
-  status?: AppointmentStatus;
-}): Promise<Appointment[]> => {
-  return get<Appointment[]>('/appointments/today', params);
+export const getTodayAppointments = async (
+  params?: TodayAppointmentsParams
+): Promise<Appointment[]> => {
+  return get<Appointment[]>('/appointments/today', { params });
 };
 
 /**
  * Get upcoming appointments
  */
-export const getUpcomingAppointments = async (params?: {
-  days?: number;
-  department?: Department;
-}): Promise<Appointment[]> => {
-  return get<Appointment[]>('/appointments/upcoming', params);
+export const getUpcomingAppointments = async (
+  params?: UpcomingAppointmentsParams
+): Promise<Appointment[]> => {
+  return get<Appointment[]>('/appointments/upcoming', { params });
 };
 
 // ============================================
@@ -106,23 +145,19 @@ export const getUpcomingAppointments = async (params?: {
 /**
  * Get available time slots for a specific date and department
  */
-export const getAvailableSlots = async (params: {
-  date: string;
-  department: Department;
-  staffId?: string;
-  duration?: number;
-}): Promise<AvailableSlotsResponse> => {
-  return get<AvailableSlotsResponse>('/appointments/available-slots', params);
+export const getAvailableSlots = async (
+  params: AvailableSlotsParams
+): Promise<AvailableSlotsResponse> => {
+  return get<AvailableSlotsResponse>('/appointments/available-slots', { params });
 };
 
 /**
  * Get available dates for a department (next N days with available slots)
  */
-export const getAvailableDates = async (params: {
-  department: Department;
-  days?: number;
-}): Promise<string[]> => {
-  return get<string[]>('/appointments/available-dates', params);
+export const getAvailableDates = async (
+  params: AvailableDatesParams
+): Promise<string[]> => {
+  return get<string[]>('/appointments/available-dates', { params });
 };
 
 // ============================================
@@ -220,11 +255,9 @@ export const callNextPatient = async (department: Department): Promise<Appointme
 /**
  * Get appointment statistics
  */
-export const getAppointmentStats = async (params?: {
-  startDate?: string;
-  endDate?: string;
-  department?: Department;
-}): Promise<{
+export const getAppointmentStats = async (
+  params?: AppointmentStatsParams
+): Promise<{
   total: number;
   completed: number;
   cancelled: number;
@@ -232,7 +265,7 @@ export const getAppointmentStats = async (params?: {
   completionRate: number;
   noShowRate: number;
 }> => {
-  return get('/appointments/stats', params);
+  return get('/appointments/stats', { params });
 };
 
 // ============================================
