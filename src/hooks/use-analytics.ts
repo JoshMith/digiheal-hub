@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, type AnalyticsDateRange } from '@/api';
 import type { Department } from '@/types/api.types';
 
+// Cache durations to prevent rate limiting
+const STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+
 // Query keys
 export const analyticsKeys = {
   all: ['analytics'] as const,
@@ -21,10 +25,13 @@ export function useDashboardMetrics(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.dashboard(params),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard(params);
-      // Backend returns { success, data: { metrics: {...} } }
-      // Extract metrics or fallback to data
       return response.data || response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -40,6 +47,11 @@ export function usePatientFlowData(params: AnalyticsDateRange & {
       return response.data;
     },
     enabled: !!params.startDate && !!params.endDate,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -55,6 +67,11 @@ export function useWaitTimeData(params: AnalyticsDateRange & {
       return response.data;
     },
     enabled: !!params.startDate && !!params.endDate,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -64,9 +81,13 @@ export function useDepartmentLoad(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.departmentLoad(params),
     queryFn: async () => {
       const response = await analyticsApi.getDepartmentLoad(params);
-      // Backend returns { success, data: { departments: [...], summary: {...} } }
       return response.data || response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -81,6 +102,11 @@ export function useStaffPerformance(params?: AnalyticsDateRange & {
       const response = await analyticsApi.getStaffPerformance(params);
       return response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -90,9 +116,13 @@ export function usePredictionAccuracy(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.predictionAccuracy(params),
     queryFn: async () => {
       const response = await analyticsApi.getPredictionAccuracy(params);
-      // Backend returns nested data structure
       return response.data || response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
@@ -104,17 +134,29 @@ export function usePeakHours(params?: AnalyticsDateRange) {
       const response = await analyticsApi.getPeakHours(params);
       return response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
 
-// Get today's quick stats
+// Get today's quick stats - DISABLED to reduce duplicate requests
+// Use useDashboardMetrics() instead which already provides today's data
 export function useTodayStats() {
   return useQuery({
     queryKey: analyticsKeys.todayStats(),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard();
-      // Use dashboard metrics for today's stats
       return response.data || response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    // Disabled by default - use dashboardMetrics instead
+    enabled: false,
   });
 }

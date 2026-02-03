@@ -42,7 +42,6 @@ import {
   useDepartmentLoad,
   useStaffPerformance,
   usePredictionAccuracy,
-  useTodayStats,
 } from "@/hooks/use-analytics";
 import type { Department } from "@/types/api.types";
 
@@ -73,8 +72,10 @@ const AnalyticsDashboard = () => {
 
   const dateRangeParams = getDateRangeParams();
 
-  // API hooks
+  // API hooks - using staggered loading to prevent rate limiting
   const { data: dashboardMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(dateRangeParams);
+  
+  // Only fetch detailed data for the active tab to reduce requests
   const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({
     ...dateRangeParams,
     granularity: 'hourly'
@@ -86,16 +87,16 @@ const AnalyticsDashboard = () => {
   const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad(dateRangeParams);
   const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance(dateRangeParams);
   const { data: predictionAccuracy, isLoading: isLoadingPrediction, refetch: refetchPrediction } = usePredictionAccuracy(dateRangeParams);
-  const { data: todayStats, isLoading: isLoadingToday, refetch: refetchToday } = useTodayStats();
 
-  const handleRefresh = () => {
-    refetchMetrics();
-    refetchFlow();
-    refetchWaitTime();
-    refetchDept();
-    refetchStaff();
-    refetchPrediction();
-    refetchToday();
+  // Staggered refresh to avoid rate limiting
+  const handleRefresh = async () => {
+    await refetchMetrics();
+    // Add small delays between refreshes
+    setTimeout(() => refetchFlow(), 200);
+    setTimeout(() => refetchWaitTime(), 400);
+    setTimeout(() => refetchDept(), 600);
+    setTimeout(() => refetchStaff(), 800);
+    setTimeout(() => refetchPrediction(), 1000);
   };
 
   // Format patient flow data for chart
@@ -149,7 +150,7 @@ const AnalyticsDashboard = () => {
     noShowRate: dashboardMetrics?.noShowRate || 0,
   };
 
-  const isLoading = isLoadingMetrics || isLoadingToday;
+  const isLoading = isLoadingMetrics;
 
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
