@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, type AnalyticsDateRange } from '@/api';
 import type { Department } from '@/types/api.types';
 
-// Cache durations to prevent rate limiting
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+// Cache durations to prevent rate limiting - increased for better performance
+const STALE_TIME = 10 * 60 * 1000; // 10 minutes - data is fresh for 10 min
+const CACHE_TIME = 30 * 60 * 1000; // 30 minutes - keep in cache
 
 // Query keys
 export const analyticsKeys = {
@@ -39,14 +39,16 @@ export function useDashboardMetrics(params?: AnalyticsDateRange) {
 export function usePatientFlowData(params: AnalyticsDateRange & { 
   granularity?: 'hourly' | 'daily' | 'weekly';
   department?: Department;
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...apiParams } = params;
   return useQuery({
-    queryKey: analyticsKeys.patientFlow(params),
+    queryKey: analyticsKeys.patientFlow(apiParams),
     queryFn: async () => {
-      const response = await analyticsApi.getPatientFlow(params);
+      const response = await analyticsApi.getPatientFlow(apiParams);
       return response.data;
     },
-    enabled: !!params.startDate && !!params.endDate,
+    enabled: enabled && !!params.startDate && !!params.endDate,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
@@ -59,14 +61,16 @@ export function usePatientFlowData(params: AnalyticsDateRange & {
 export function useWaitTimeData(params: AnalyticsDateRange & { 
   department?: Department;
   granularity?: 'hourly' | 'daily';
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...apiParams } = params;
   return useQuery({
-    queryKey: analyticsKeys.waitTimes(params),
+    queryKey: analyticsKeys.waitTimes(apiParams),
     queryFn: async () => {
-      const response = await analyticsApi.getWaitTimes(params);
+      const response = await analyticsApi.getWaitTimes(apiParams);
       return response.data;
     },
-    enabled: !!params.startDate && !!params.endDate,
+    enabled: enabled && !!params.startDate && !!params.endDate,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
@@ -76,13 +80,16 @@ export function useWaitTimeData(params: AnalyticsDateRange & {
 }
 
 // Get department load/utilization
-export function useDepartmentLoad(params?: AnalyticsDateRange) {
+export function useDepartmentLoad(params?: AnalyticsDateRange & { enabled?: boolean }) {
+  const enabled = params?.enabled ?? true;
+  const apiParams = params ? { startDate: params.startDate, endDate: params.endDate } : undefined;
   return useQuery({
-    queryKey: analyticsKeys.departmentLoad(params),
+    queryKey: analyticsKeys.departmentLoad(apiParams),
     queryFn: async () => {
-      const response = await analyticsApi.getDepartmentLoad(params);
+      const response = await analyticsApi.getDepartmentLoad(apiParams);
       return response.data || response.data;
     },
+    enabled,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
@@ -95,13 +102,16 @@ export function useDepartmentLoad(params?: AnalyticsDateRange) {
 export function useStaffPerformance(params?: AnalyticsDateRange & { 
   department?: Department;
   staffId?: string;
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...apiParams } = params || {};
   return useQuery({
-    queryKey: analyticsKeys.staffPerformance(params),
+    queryKey: analyticsKeys.staffPerformance(apiParams),
     queryFn: async () => {
-      const response = await analyticsApi.getStaffPerformance(params);
+      const response = await analyticsApi.getStaffPerformance(apiParams);
       return response.data;
     },
+    enabled,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
@@ -111,13 +121,16 @@ export function useStaffPerformance(params?: AnalyticsDateRange & {
 }
 
 // Get ML prediction accuracy
-export function usePredictionAccuracy(params?: AnalyticsDateRange) {
+export function usePredictionAccuracy(params?: AnalyticsDateRange & { enabled?: boolean }) {
+  const enabled = params?.enabled ?? true;
+  const apiParams = params ? { startDate: params.startDate, endDate: params.endDate } : undefined;
   return useQuery({
-    queryKey: analyticsKeys.predictionAccuracy(params),
+    queryKey: analyticsKeys.predictionAccuracy(apiParams),
     queryFn: async () => {
-      const response = await analyticsApi.getPredictionAccuracy(params);
+      const response = await analyticsApi.getPredictionAccuracy(apiParams);
       return response.data || response.data;
     },
+    enabled,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
