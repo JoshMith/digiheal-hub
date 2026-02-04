@@ -72,21 +72,42 @@ const AnalyticsDashboard = () => {
 
   const dateRangeParams = getDateRangeParams();
 
-  // API hooks - using staggered loading to prevent rate limiting
+  // API hooks - LAZY LOADING: Only fetch data for active tab to prevent rate limiting
   const { data: dashboardMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(dateRangeParams);
   
-  // Only fetch detailed data for the active tab to reduce requests
+  // Overview tab data - only fetch when overview or no specific tab is active
+  const shouldFetchOverview = activeTab === 'overview';
   const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({
     ...dateRangeParams,
-    granularity: 'hourly'
+    granularity: 'hourly',
+    enabled: shouldFetchOverview
   });
   const { data: waitTimeData, isLoading: isLoadingWaitTime, refetch: refetchWaitTime } = useWaitTimeData({
     ...dateRangeParams,
-    granularity: 'daily'
+    granularity: 'daily',
+    enabled: shouldFetchOverview
   });
-  const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad(dateRangeParams);
-  const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance(dateRangeParams);
-  const { data: predictionAccuracy, isLoading: isLoadingPrediction, refetch: refetchPrediction } = usePredictionAccuracy(dateRangeParams);
+  
+  // Department tab data - only fetch when departments tab is active
+  const shouldFetchDept = activeTab === 'departments';
+  const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad({
+    ...dateRangeParams,
+    enabled: shouldFetchDept
+  });
+  
+  // Staff tab data - only fetch when staff tab is active
+  const shouldFetchStaff = activeTab === 'staff';
+  const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance({
+    ...dateRangeParams,
+    enabled: shouldFetchStaff
+  });
+  
+  // Predictions tab data - only fetch when predictions tab is active
+  const shouldFetchPredictions = activeTab === 'predictions';
+  const { data: predictionAccuracy, isLoading: isLoadingPrediction, refetch: refetchPrediction } = usePredictionAccuracy({
+    ...dateRangeParams,
+    enabled: shouldFetchPredictions
+  });
 
   // Staggered refresh to avoid rate limiting
   const handleRefresh = async () => {
