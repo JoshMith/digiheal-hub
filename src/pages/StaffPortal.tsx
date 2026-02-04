@@ -33,21 +33,28 @@ import {
   Timer,
   ClipboardList,
   HeartPulse,
-  Loader2
+  Loader2,
+  LogOut,
+  Play
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
-import { useInteractionQueue } from "@/hooks/use-interactions";
+import { useInteractionContext } from "@/context/interactionContext";
+import { useInteractionQueue, useStartConsultation } from "@/hooks/use-interactions";
 import { useTodayAppointments, useAppointmentStats } from "@/hooks/use-appointments";
 import { useDashboardMetrics } from "@/hooks/use-analytics";
 import { usePatients } from "@/hooks/use-patients";
-import type { Staff, Appointment, Department, Interaction, PriorityLevel, AppointmentStatus } from "@/types/api.types";
+import { useLogout } from "@/hooks/use-auth";
+import { toast } from "sonner";
+import type { Staff, Appointment, Department, Interaction, PriorityLevel, AppointmentStatus, AppointmentType } from "@/types/api.types";
 
 const StaffPortal = () => {
   const [activeTab, setActiveTab] = useState("queue");
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  const { profile, user } = useAuth();
+  const { profile, user, logout: authLogout } = useAuth();
+  const { startInteraction } = useInteractionContext();
+  const logoutMutation = useLogout();
 
   // Cast profile to Staff type
   const staffProfile = profile as Staff | null;
@@ -63,6 +70,9 @@ const StaffPortal = () => {
     department: staffDepartment,
     staffId: staffProfile?.id
   });
+  
+  // Start consultation mutation (for patients already checked in)
+  const startConsultationMutation = useStartConsultation();
 
   // Today's appointments for the department
   const {
@@ -213,6 +223,51 @@ const StaffPortal = () => {
     return "SCHEDULED";
   };
 
+  // Handle starting a consultation - populates FloatingTimer
+  const handleStartConsultation = (interaction: Interaction) => {
+    const patientName = interaction.patient 
+      ? `${interaction.patient.firstName} ${interaction.patient.lastName}`
+      : 'Unknown Patient';
+    
+    // Start the interaction in context (populates FloatingTimer)
+    startInteraction({
+      interactionId: interaction.id,
+      appointmentId: interaction.appointmentId || '',
+      patientName,
+      patientId: interaction.patientId,
+      department: (interaction.department as Department) || staffDepartment || 'GENERAL_MEDICINE' as Department,
+      priority: (interaction.priority as PriorityLevel) || 'NORMAL' as PriorityLevel,
+      appointmentType: (interaction.appointmentType as AppointmentType) || 'WALK_IN' as AppointmentType,
+      currentPhase: interaction,
+    });
+    
+    // Start the consultation phase on the backend
+    startConsultationMutation.mutate(interaction.id, {
+      onSuccess: () => {
+        toast.success(`Started consultation with ${patientName}`);
+        refetchQueue();
+      },
+      onError: (error) => {
+        toast.error('Failed to start consultation on server');
+        console.error('Start consultation error:', error);
+      }
+    });
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      authLogout();
+      toast.success('Logged out successfully');
+      navigate('/');
+    } catch (error) {
+      // Even on error, logout locally
+      authLogout();
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
       <div className="container mx-auto px-4 py-8">
@@ -253,6 +308,19 @@ const StaffPortal = () => {
               <Button className="bg-accent hover:bg-accent-hover text-accent-foreground shadow-soft" onClick={() => navigate('/new-patient')}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Patient
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="shadow-soft text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                {logoutMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="mr-2 h-4 w-4" />
+                )}
+                Logout
               </Button>
             </div>
           </div>
@@ -498,16 +566,30 @@ const StaffPortal = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => navigate(`/patient/${interaction.patient?.id || interaction.patientId}`)}
+                                  title="View Patient"
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  className="bg-accent hover:bg-accent-hover text-accent-foreground"
-                                  onClick={() => navigate(`/patient/${interaction.patient?.id || interaction.patientId}`)}
-                                >
-                                  <HeartPulse className="h-4 w-4" />
-                                </Button>
+                                {status !== 'COMPLETED' && status !== 'INTERACTION_IN_PROGRESS' && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    onClick={() => handleStartConsultation(interaction)}
+                                    disabled={startConsultationMutation.isPending}
+                                    title="Start Consultation"
+                                  >
+                                    {startConsultationMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Play className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                                {status === 'INTERACTION_IN_PROGRESS' && (
+                                  <Badge className="bg-primary text-primary-foreground text-xs">
+                                    Active
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
