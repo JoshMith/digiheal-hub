@@ -2,7 +2,7 @@
 // DKUT Medical Center - Analytics API Service
 // ============================================
 
-import api from './client';
+import { get } from './client';
 import type { 
   DashboardMetrics,
   PatientFlowData,
@@ -11,10 +11,6 @@ import type {
   PredictionAccuracyData,
   Department
 } from '@/types/api.types';
-
-// ============================================
-// TYPES
-// ============================================
 
 export interface AnalyticsDateRange {
   startDate: string;
@@ -113,77 +109,77 @@ export const analyticsApi = {
    * GET /analytics/dashboard
    */
   getDashboard: (params?: AnalyticsDateRange) => 
-    api.get<DashboardMetrics>('/analytics/dashboard', { params }),
+    get<DashboardMetrics>('/analytics/dashboard', { params }),
 
   /**
    * Get patient flow data
    * GET /analytics/patient-flow
    */
   getPatientFlow: (params: PatientFlowParams) => 
-    api.get<PatientFlowData[]>('/analytics/patient-flow', { params }),
+    get<PatientFlowData[]>('/analytics/patient-flow', { params }),
 
   /**
    * Get wait time analytics
    * GET /analytics/wait-times
    */
   getWaitTimes: (params: WaitTimeParams) => 
-    api.get<WaitTimeData[]>('/analytics/wait-times', { params }),
+    get<WaitTimeData[]>('/analytics/wait-times', { params }),
 
   /**
    * Get department utilization/load
    * GET /analytics/department-load
    */
   getDepartmentLoad: (params?: AnalyticsDateRange) => 
-    api.get<DepartmentLoadData[]>('/analytics/department-load', { params }),
+    get<DepartmentLoadData[]>('/analytics/department-load', { params }),
 
   /**
    * Get staff performance metrics
    * GET /analytics/staff-performance
    */
   getStaffPerformance: (params?: StaffPerformanceParams) => 
-    api.get<StaffPerformanceData[]>('/analytics/staff-performance', { params }),
+    get<StaffPerformanceData[]>('/analytics/staff-performance', { params }),
 
   /**
    * Get ML prediction accuracy
    * GET /analytics/prediction-accuracy
    */
   getPredictionAccuracy: (params?: AnalyticsDateRange) => 
-    api.get<PredictionAccuracyData[]>('/analytics/prediction-accuracy', { params }),
+    get<PredictionAccuracyData[]>('/analytics/prediction-accuracy', { params }),
 
   /**
    * Get today's quick stats
    * GET /analytics/today
    */
   getTodayStats: () => 
-    api.get<TodayStats>('/analytics/today'),
+    get<TodayStats>('/analytics/today'),
 
   /**
    * Get peak hours analysis
    * GET /analytics/peak-hours
    */
   getPeakHours: (params?: AnalyticsDateRange) => 
-    api.get<PeakHourData[]>('/analytics/peak-hours', { params }),
+    get<PeakHourData[]>('/analytics/peak-hours', { params }),
 
   /**
    * Export analytics data
    * GET /analytics/export
    */
   exportData: (params: ExportDataParams) => 
-    api.get<ExportDataResponse>('/analytics/export', { params }),
+    get<ExportDataResponse>('/analytics/export', { params }),
 
   /**
    * Get appointment statistics
    * GET /analytics/appointments
    */
   getAppointmentStats: (params?: AppointmentStatsParams) => 
-    api.get<AppointmentStatsResponse>('/analytics/appointments', { params }),
+    get<AppointmentStatsResponse>('/analytics/appointments', { params }),
 
   /**
    * Get interaction statistics  
    * GET /analytics/interactions
    */
   getInteractionStats: (params?: AnalyticsDateRange) => 
-    api.get<InteractionStatsResponse>('/analytics/interactions', { params }),
+    get<InteractionStatsResponse>('/analytics/interactions', { params }),
 };
 
 export default analyticsApi;

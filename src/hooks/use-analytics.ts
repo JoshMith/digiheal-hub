@@ -25,7 +25,8 @@ export function useDashboardMetrics(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.dashboard(params),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard(params);
-      return response.data || response.data;
+      // axios interceptor already unwraps response.data, so response IS the data
+      return response;
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
@@ -46,7 +47,7 @@ export function usePatientFlowData(params: AnalyticsDateRange & {
     queryKey: analyticsKeys.patientFlow(apiParams),
     queryFn: async () => {
       const response = await analyticsApi.getPatientFlow(apiParams);
-      return response.data;
+      return response;
     },
     enabled: enabled && !!params.startDate && !!params.endDate,
     staleTime: STALE_TIME,
@@ -68,7 +69,7 @@ export function useWaitTimeData(params: AnalyticsDateRange & {
     queryKey: analyticsKeys.waitTimes(apiParams),
     queryFn: async () => {
       const response = await analyticsApi.getWaitTimes(apiParams);
-      return response.data;
+      return response;
     },
     enabled: enabled && !!params.startDate && !!params.endDate,
     staleTime: STALE_TIME,
@@ -87,7 +88,7 @@ export function useDepartmentLoad(params?: AnalyticsDateRange & { enabled?: bool
     queryKey: analyticsKeys.departmentLoad(apiParams),
     queryFn: async () => {
       const response = await analyticsApi.getDepartmentLoad(apiParams);
-      return response.data || response.data;
+      return response;
     },
     enabled,
     staleTime: STALE_TIME,
@@ -109,7 +110,7 @@ export function useStaffPerformance(params?: AnalyticsDateRange & {
     queryKey: analyticsKeys.staffPerformance(apiParams),
     queryFn: async () => {
       const response = await analyticsApi.getStaffPerformance(apiParams);
-      return response.data;
+      return response;
     },
     enabled,
     staleTime: STALE_TIME,
@@ -128,7 +129,7 @@ export function usePredictionAccuracy(params?: AnalyticsDateRange & { enabled?: 
     queryKey: analyticsKeys.predictionAccuracy(apiParams),
     queryFn: async () => {
       const response = await analyticsApi.getPredictionAccuracy(apiParams);
-      return response.data || response.data;
+      return response;
     },
     enabled,
     staleTime: STALE_TIME,
@@ -145,7 +146,7 @@ export function usePeakHours(params?: AnalyticsDateRange) {
     queryKey: analyticsKeys.peakHours(params),
     queryFn: async () => {
       const response = await analyticsApi.getPeakHours(params);
-      return response.data;
+      return response;
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
@@ -162,7 +163,7 @@ export function useTodayStats() {
     queryKey: analyticsKeys.todayStats(),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard();
-      return response.data || response.data;
+      return response;
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,

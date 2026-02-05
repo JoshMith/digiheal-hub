@@ -22,9 +22,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Eye,
-  UserCheck,
   Stethoscope,
-  Pill,
   ArrowLeft,
   TrendingUp,
   TrendingDown,
@@ -32,7 +30,6 @@ import {
   RefreshCw,
   Timer,
   ClipboardList,
-  HeartPulse,
   Loader2,
   LogOut,
   Play
@@ -421,7 +418,7 @@ const StaffPortal = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 h-12">
+              <TabsList className="grid w-full grid-cols-3 h-12">
                 <TabsTrigger value="queue" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Queue
@@ -433,10 +430,6 @@ const StaffPortal = () => {
                 <TabsTrigger value="patients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <FileText className="h-4 w-4 mr-2" />
                   Records
-                </TabsTrigger>
-                <TabsTrigger value="inventory" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Pill className="h-4 w-4 mr-2" />
-                  Inventory
                 </TabsTrigger>
               </TabsList>
 
@@ -742,24 +735,6 @@ const StaffPortal = () => {
                 </Card>
               </TabsContent>
 
-              {/* Inventory Tab - Placeholder */}
-              <TabsContent value="inventory" className="space-y-6">
-                <Card className="shadow-medium">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Pill className="h-5 w-5 text-primary" />
-                      Inventory Alerts
-                    </CardTitle>
-                    <CardDescription>Low stock and critical items</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Pill className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Inventory management coming soon</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
             </Tabs>
           </div>
 
