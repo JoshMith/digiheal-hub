@@ -105,37 +105,42 @@ export const updateInteractionPhase = async (
 
 /**
  * Start vitals recording
+ * Backend route: POST /interactions/:id/vitals-start
  */
 export const startVitals = async (interactionId: string): Promise<Interaction> => {
-  return patch<Interaction>(`/interactions/${interactionId}/vitals-start`);
+  return post<Interaction>(`/interactions/${interactionId}/vitals-start`, {});
 };
 
 /**
  * End vitals recording
+ * Backend route: POST /interactions/:id/vitals-end
  */
 export const endVitals = async (interactionId: string): Promise<Interaction> => {
-  return patch<Interaction>(`/interactions/${interactionId}/vitals-end`);
+  return post<Interaction>(`/interactions/${interactionId}/vitals-end`, {});
 };
 
 /**
- * Start doctor interaction
+ * Start doctor consultation
+ * Backend route: POST /interactions/:id/consultation-start
  */
 export const startDoctorInteraction = async (interactionId: string): Promise<Interaction> => {
-  return patch<Interaction>(`/interactions/${interactionId}/interaction-start`);
+  return post<Interaction>(`/interactions/${interactionId}/consultation-start`, {});
 };
 
 /**
- * End doctor interaction
+ * End doctor consultation
+ * Backend route: POST /interactions/:id/consultation-end
  */
 export const endDoctorInteraction = async (interactionId: string): Promise<Interaction> => {
-  return patch<Interaction>(`/interactions/${interactionId}/interaction-end`);
+  return post<Interaction>(`/interactions/${interactionId}/consultation-end`, {});
 };
 
 /**
  * Complete checkout
+ * Backend route: POST /interactions/:id/checkout
  */
 export const checkout = async (interactionId: string): Promise<Interaction> => {
-  return patch<Interaction>(`/interactions/${interactionId}/checkout`);
+  return post<Interaction>(`/interactions/${interactionId}/checkout`, {});
 };
 
 // ============================================
