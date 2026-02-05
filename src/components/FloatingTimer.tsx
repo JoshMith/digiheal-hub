@@ -15,10 +15,14 @@ import {
   ClipboardCheck,
   CheckCircle,
   ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { useInteractionContext } from '@/context/interactionContext';
 import { useAuth } from '@/context/authContext';
-import type { InteractionPhase, Interaction } from '@/types/api.types';
+import { useNotificationSound } from '@/hooks/use-notification-sound';
+import { usePredictDuration } from '@/hooks/use-appointments';
+import type { InteractionPhase } from '@/types/api.types';
+import { Department as DeptEnum, PriorityLevel as PriorityEnum, AppointmentType as ApptTypeEnum } from '@/types/api.types';
 
 type PhaseConfig = Record<InteractionPhase, { label: string; icon: React.ReactNode; color: string }>;
 
@@ -39,6 +43,30 @@ export function FloatingTimer() {
 
   // Only show for staff/admin users
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
+
+  // Get ML prediction for duration
+  const { data: prediction } = usePredictDuration(
+    activeInteraction ? {
+      department: activeInteraction.department as DeptEnum,
+      priority: activeInteraction.priority as PriorityEnum,
+      appointmentType: activeInteraction.appointmentType as ApptTypeEnum,
+      symptomCount: 1,
+      timeOfDay: new Date().getHours(),
+      dayOfWeek: new Date().getDay()
+    } : undefined
+  );
+
+  // Convert predicted duration (minutes) to seconds, default to 15 minutes
+  const predictedSeconds = (prediction?.predictedDuration || 15) * 60;
+  const totalElapsedSeconds = activeInteraction ? activeInteraction.totalElapsed + elapsedTime : 0;
+
+  // Notification sound hook
+  const { isOverTime, isNearLimit } = useNotificationSound({
+    thresholdSeconds: predictedSeconds,
+    elapsedSeconds: totalElapsedSeconds,
+    isActive: !!activeInteraction && (activeInteraction.currentPhase as unknown as InteractionPhase) !== 'COMPLETED',
+    label: activeInteraction?.patientName || 'Consultation',
+  });
 
   // Timer effect
   useEffect(() => {
@@ -95,9 +123,19 @@ export function FloatingTimer() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => !isDragging && setIsMinimized(false)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+            className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow ${
+              isOverTime 
+                ? 'bg-destructive text-destructive-foreground animate-pulse' 
+                : isNearLimit 
+                  ? 'bg-warning text-warning-foreground' 
+                  : 'bg-primary text-primary-foreground'
+            }`}
           >
-            <div className={`w-2 h-2 rounded-full ${currentPhaseConfig.color} animate-pulse`} />
+            {isOverTime ? (
+              <AlertTriangle className="h-4 w-4" />
+            ) : (
+              <div className={`w-2 h-2 rounded-full ${currentPhaseConfig.color} animate-pulse`} />
+            )}
             <Clock className="h-4 w-4" />
             <span className="font-mono font-semibold">{formatTime(elapsedTime)}</span>
             <Maximize2 className="h-3 w-3 ml-1" />
@@ -150,7 +188,13 @@ export function FloatingTimer() {
               </div>
 
               {/* Phase & Timer */}
-              <div className="bg-muted/50 rounded-lg p-2">
+              <div className={`rounded-lg p-2 ${
+                isOverTime 
+                  ? 'bg-destructive/10 border border-destructive/30' 
+                  : isNearLimit 
+                    ? 'bg-warning/10 border border-warning/30' 
+                    : 'bg-muted/50'
+              }`}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5">
                     <div className={`p-1 rounded ${currentPhaseConfig.color} text-white`}>
@@ -158,7 +202,9 @@ export function FloatingTimer() {
                     </div>
                     <span className="text-xs font-medium">{currentPhaseConfig.label}</span>
                   </div>
-                  <span className="text-lg font-mono font-bold text-primary">
+                  <span className={`text-lg font-mono font-bold ${
+                    isOverTime ? 'text-destructive' : isNearLimit ? 'text-warning' : 'text-primary'
+                  }`}>
                     {formatTime(elapsedTime)}
                   </span>
                 </div>
@@ -166,6 +212,20 @@ export function FloatingTimer() {
                   <span>Total time</span>
                   <span className="font-mono">{formatTime(totalTime)}</span>
                 </div>
+                {/* Predicted time indicator */}
+                {prediction?.predictedDuration && (
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-muted-foreground">Predicted</span>
+                    <span className={`font-mono ${isOverTime ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {prediction.predictedDuration} min
+                      {isOverTime && (
+                        <span className="ml-1 text-destructive">
+                          (+{Math.floor((totalTime - prediction.predictedDuration * 60) / 60)}m over)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Action */}
