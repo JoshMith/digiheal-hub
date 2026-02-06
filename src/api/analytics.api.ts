@@ -109,42 +109,42 @@ export const analyticsApi = {
    * GET /analytics/dashboard
    */
   getDashboard: (params?: AnalyticsDateRange) => 
-    get<DashboardMetrics>('/analytics/dashboard', { params }),
+    get<DashboardMetrics>('/analytics/dashboard', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get patient flow data
    * GET /analytics/patient-flow
    */
   getPatientFlow: (params: PatientFlowParams) => 
-    get<PatientFlowData[]>('/analytics/patient-flow', { params }),
+    get<PatientFlowData[]>('/analytics/patient-flow', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get wait time analytics
    * GET /analytics/wait-times
    */
   getWaitTimes: (params: WaitTimeParams) => 
-    get<WaitTimeData[]>('/analytics/wait-times', { params }),
+    get<WaitTimeData[]>('/analytics/wait-times', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get department utilization/load
    * GET /analytics/department-load
    */
   getDepartmentLoad: (params?: AnalyticsDateRange) => 
-    get<DepartmentLoadData[]>('/analytics/department-load', { params }),
+    get<DepartmentLoadData[]>('/analytics/department-load', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get staff performance metrics
    * GET /analytics/staff-performance
    */
   getStaffPerformance: (params?: StaffPerformanceParams) => 
-    get<StaffPerformanceData[]>('/analytics/staff-performance', { params }),
+    get<StaffPerformanceData[]>('/analytics/staff-performance', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get ML prediction accuracy
    * GET /analytics/prediction-accuracy
    */
   getPredictionAccuracy: (params?: AnalyticsDateRange) => 
-    get<PredictionAccuracyData[]>('/analytics/prediction-accuracy', { params }),
+    get<PredictionAccuracyData[]>('/analytics/prediction-accuracy', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get today's quick stats
@@ -158,28 +158,28 @@ export const analyticsApi = {
    * GET /analytics/peak-hours
    */
   getPeakHours: (params?: AnalyticsDateRange) => 
-    get<PeakHourData[]>('/analytics/peak-hours', { params }),
+    get<PeakHourData[]>('/analytics/peak-hours', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Export analytics data
    * GET /analytics/export
    */
   exportData: (params: ExportDataParams) => 
-    get<ExportDataResponse>('/analytics/export', { params }),
+    get<ExportDataResponse>('/analytics/export', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get appointment statistics
    * GET /analytics/appointments
    */
   getAppointmentStats: (params?: AppointmentStatsParams) => 
-    get<AppointmentStatsResponse>('/analytics/appointments', { params }),
+    get<AppointmentStatsResponse>('/analytics/appointments', { params: params as unknown as Record<string, unknown> }),
 
   /**
    * Get interaction statistics  
    * GET /analytics/interactions
    */
   getInteractionStats: (params?: AnalyticsDateRange) => 
-    get<InteractionStatsResponse>('/analytics/interactions', { params }),
+    get<InteractionStatsResponse>('/analytics/interactions', { params: params as unknown as Record<string, unknown> }),
 };
 
 export default analyticsApi;

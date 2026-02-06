@@ -75,7 +75,7 @@ export const updatePrescription = async (
 export const getPrescriptions = async (
   params?: PrescriptionQueryParams
 ): Promise<PaginatedResponse<Prescription>> => {
-  const response = await get<Prescription[]>('/prescriptions', { params });
+  const response = await get<Prescription[]>('/prescriptions', { params: params as unknown as Record<string, unknown> });
   return response as unknown as PaginatedResponse<Prescription>;
 };
 
@@ -86,7 +86,7 @@ export const getPatientPrescriptions = async (
   patientId: string,
   params?: PatientPrescriptionsParams
 ): Promise<Prescription[]> => {
-  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params });
+  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -184,7 +184,7 @@ export const getPrescriptionStats = async (
   totalExpired: number;
   topMedications: Array<{ name: string; count: number }>;
 }> => {
-  return get('/prescriptions/stats', { params });
+  return get('/prescriptions/stats', { params: params as unknown as Record<string, unknown> });
 };
 
 // ============================================

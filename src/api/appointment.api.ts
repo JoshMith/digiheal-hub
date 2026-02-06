@@ -120,17 +120,18 @@ export const getAppointments = async (
   // Backend route: GET /appointments/patient/:patientId
   if (params?.patientId) {
     const { patientId, ...rest } = params;
-    return get<PaginatedResponse<Appointment>>(`/appointments/patient/${patientId}`, rest);
+    return get<PaginatedResponse<Appointment>>(`/appointments/patient/${patientId}`, { params: rest });
   }
   
   // Backend route: GET /appointments/staff/:staffId
   if (params?.staffId) {
     const { staffId, ...rest } = params;
-    return get<PaginatedResponse<Appointment>>(`/appointments/staff/${staffId}`, rest);
+    return get<PaginatedResponse<Appointment>>(`/appointments/staff/${staffId}`, { params: rest });
   }
   
   // Generic appointments list (if route exists)
-  return get<PaginatedResponse<Appointment>>('/appointments', { params });
+  // FIX: Cast params to Record<string, unknown> to satisfy type requirement
+  return get<PaginatedResponse<Appointment>>('/appointments', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -153,7 +154,7 @@ export const getTodayAppointments = async (
 export const getUpcomingAppointments = async (
   params?: UpcomingAppointmentsParams
 ): Promise<Appointment[]> => {
-  return get<Appointment[]>('/appointments/upcoming', { params });
+  return get<Appointment[]>('/appointments/upcoming', { params: params as Record<string, unknown> });
 };
 
 // ============================================
@@ -168,7 +169,7 @@ export const getAvailableSlots = async (
   params: AvailableSlotsParams
 ): Promise<AvailableSlotsResponse> => {
   // Backend expects: GET /appointments/slots?date=2024-01-01&department=GENERAL_MEDICINE
-  return get<AvailableSlotsResponse>('/appointments/slots', { params });
+  return get<AvailableSlotsResponse>('/appointments/slots', { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -177,7 +178,7 @@ export const getAvailableSlots = async (
 export const getAvailableDates = async (
   params: AvailableDatesParams
 ): Promise<string[]> => {
-  return get<string[]>('/appointments/available-dates', { params });
+  return get<string[]>('/appointments/available-dates', { params: params as unknown as Record<string, unknown> });
 };
 
 // ============================================
@@ -289,7 +290,7 @@ export const getAppointmentStats = async (
   completionRate: number;
   noShowRate: number;
 }> => {
-  return get('/appointments/stats', { params });
+  return get('/appointments/stats', { params: params as Record<string, unknown> });
 };
 
 // ============================================

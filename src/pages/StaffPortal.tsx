@@ -67,7 +67,7 @@ const StaffPortal = () => {
     department: staffDepartment,
     staffId: staffProfile?.id
   });
-  
+
   // Start consultation mutation (for patients already checked in)
   const startConsultationMutation = useStartConsultation();
 
@@ -129,11 +129,11 @@ const StaffPortal = () => {
     todayPatients: dashboardMetrics?.totalPatientsToday || 0,
     totalAppointments: todayAppointments?.length || 0,
     completedConsultations: appointmentStats?.completed || 0,
-    averageWaitTime: interactionStats?.avgInteractionDuration 
+    averageWaitTime: interactionStats?.avgInteractionDuration
       ? `${Math.round(interactionStats.avgInteractionDuration)} min`
       : dashboardMetrics?.avgWaitTime
-      ? `${Math.round(dashboardMetrics.avgWaitTime)} min`
-      : "-- min",
+        ? `${Math.round(dashboardMetrics.avgWaitTime)} min`
+        : "-- min",
     todayChange: "+0",
     waitTimeChange: "0 min"
   };
@@ -153,8 +153,8 @@ const StaffPortal = () => {
   const getStatusIcon = (status?: string) => {
     const statusLower = status?.toLowerCase();
     switch (statusLower) {
-      case "completed": 
-      case "interaction_end": 
+      case "completed":
+      case "interaction_end":
         return <CheckCircle className="h-4 w-4 text-accent" />;
       case "in_progress":
       case "interaction_in_progress":
@@ -164,9 +164,9 @@ const StaffPortal = () => {
       case "checked_in":
       case "check_in_time":
         return <AlertTriangle className="h-4 w-4 text-warning" />;
-      case "scheduled": 
+      case "scheduled":
         return <Calendar className="h-4 w-4 text-muted-foreground" />;
-      default: 
+      default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
@@ -174,16 +174,16 @@ const StaffPortal = () => {
   const getStatusBadge = (status?: AppointmentStatus | string) => {
     const statusLower = status?.toLowerCase();
     switch (statusLower) {
-      case "completed": 
+      case "completed":
         return <Badge variant="outline" className="border-accent text-accent">Completed</Badge>;
-      case "in_progress": 
+      case "in_progress":
         return <Badge className="bg-primary">In Progress</Badge>;
       case "waiting":
-      case "checked_in": 
+      case "checked_in":
         return <Badge variant="outline" className="border-warning text-warning">Waiting</Badge>;
-      case "scheduled": 
+      case "scheduled":
         return <Badge variant="secondary">Scheduled</Badge>;
-      default: 
+      default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
@@ -221,34 +221,45 @@ const StaffPortal = () => {
   };
 
   // Handle starting a consultation - populates FloatingTimer
-  const handleStartConsultation = (interaction: Interaction) => {
-    const patientName = interaction.patient 
-      ? `${interaction.patient.firstName} ${interaction.patient.lastName}`
-      : 'Unknown Patient';
-    
-    // Start the interaction in context (populates FloatingTimer)
-    startInteraction({
-      interactionId: interaction.id,
-      appointmentId: interaction.appointmentId || '',
-      patientName,
-      patientId: interaction.patientId,
-      department: (interaction.department as Department) || staffDepartment || 'GENERAL_MEDICINE' as Department,
-      priority: (interaction.priority as PriorityLevel) || 'NORMAL' as PriorityLevel,
-      appointmentType: (interaction.appointmentType as AppointmentType) || 'WALK_IN' as AppointmentType,
-      currentPhase: 'INTERACTION_IN_PROGRESS' as InteractionPhase,
-    });
-    
-    // Start the consultation phase on the backend
-    startConsultationMutation.mutate(interaction.id, {
-      onSuccess: () => {
-        toast.success(`Started consultation with ${patientName}`);
-        refetchQueue();
-      },
-      onError: (error) => {
-        toast.error('Failed to start consultation on server');
-        console.error('Start consultation error:', error);
-      }
-    });
+  // src/pages/StaffPortal.tsx
+
+  const handleStartConsultation = (appointment: Appointment) => {
+    // Step 1: Check if interaction already exists for this appointment
+    const existingInteraction = queueData?.find(
+      (int: Interaction) => int.appointmentId === appointment.id
+    );
+
+    if (existingInteraction) {
+      // ✅ Interaction exists - just start the consultation phase
+      startConsultationMutation.mutate(existingInteraction.id, {
+        onSuccess: () => {
+          const patientName = existingInteraction.patient
+            ? `${existingInteraction.patient.firstName} ${existingInteraction.patient.lastName}`
+            : 'Unknown Patient';
+
+          // Update FloatingTimer context
+          startInteraction({
+            interactionId: existingInteraction.id,
+            appointmentId: appointment.id,
+            patientName,
+            patientId: appointment.patientId,
+            department: appointment.department,
+            priority: appointment.priority,
+            appointmentType: appointment.type,
+            currentPhase: 'INTERACTION_IN_PROGRESS',
+          });
+
+          toast.success(`Started consultation with ${patientName}`);
+          refetchQueue();
+        },
+        onError: () => {
+          toast.error('Failed to start consultation');
+        }
+      });
+    } else {
+      // ❌ No interaction - patient needs to check in first
+      toast.error('Patient must check in first before starting consultation');
+    }
   };
 
   // Handle logout
@@ -306,8 +317,8 @@ const StaffPortal = () => {
                 <Plus className="mr-2 h-4 w-4" />
                 New Patient
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleLogout}
                 disabled={logoutMutation.isPending}
                 className="shadow-soft text-destructive hover:bg-destructive hover:text-destructive-foreground"
@@ -567,7 +578,31 @@ const StaffPortal = () => {
                                   <Button
                                     size="sm"
                                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                                    onClick={() => handleStartConsultation(interaction)}
+                                    onClick={() => {
+                                      const appointment: Appointment = {
+                                        id: interaction.appointmentId || '',
+                                        patientId: interaction.patientId || '',
+                                        department: interaction.department ,
+                                        priority: interaction.priority as PriorityLevel,
+                                        type: interaction.appointmentType as AppointmentType ,
+                                        appointmentTime: interaction.checkInTime || new Date().toISOString(),
+                                        appointmentDate: new Date().toISOString(),
+                                        status: 'CHECKED_IN' as AppointmentStatus,
+                                        duration: interaction.predictedDuration || 20,
+                                        createdAt: new Date().toISOString(),
+                                        updatedAt: new Date().toISOString(),
+                                        patient: interaction.patient,
+                                        notes: '',
+                                        reason: '',
+                                        staffId: staffProfile?.id || '',
+                                        queueNumber: index + 1,
+                                        checkedInAt: interaction.checkInTime || new Date().toISOString(),
+                                        startedAt: null,
+                                        completedAt: null,
+                                        cancelledAt: null
+                                      };
+                                      handleStartConsultation(appointment);
+                                    }}
                                     disabled={startConsultationMutation.isPending}
                                     title="Start Consultation"
                                   >

@@ -71,7 +71,7 @@ export interface MLTrainingDataParams {
  * Start a new interaction (when patient checks in)
  */
 export const startInteraction = async (data: StartInteractionRequest): Promise<Interaction> => {
-  return post<Interaction>('/interactions', data);
+  return post<Interaction>('/', data);
 };
 
 /**
@@ -153,7 +153,7 @@ export const checkout = async (interactionId: string): Promise<Interaction> => {
 export const getInteractions = async (
   params?: InteractionQueryParams
 ): Promise<PaginatedResponse<Interaction>> => {
-  const response = await get<Interaction[]>('/interactions', { params });
+  const response = await get<Interaction[]>('/interactions', { params: params as Record<string, unknown> });
   return response as unknown as PaginatedResponse<Interaction>;
 };
 
@@ -163,7 +163,7 @@ export const getInteractions = async (
 export const getTodayInteractions = async (
   params?: TodayInteractionsParams
 ): Promise<Interaction[]> => {
-  return get<Interaction[]>('/interactions/today', { params });
+  return get<Interaction[]>('/interactions/today', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -173,7 +173,7 @@ export const getTodayInteractions = async (
 export const getQueue = async (
   params?: ActiveInteractionsParams
 ): Promise<Interaction[]> => {
-  return get<Interaction[]>('/interactions/queue', { params });
+  return get<Interaction[]>('/interactions/queue', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -183,7 +183,7 @@ export const getQueue = async (
 export const getActiveInteractions = async (
   params?: ActiveInteractionsParams
 ): Promise<Interaction[]> => {
-  return get<Interaction[]>('/interactions/active', { params });
+  return get<Interaction[]>('/interactions/active', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -193,7 +193,7 @@ export const getStaffInteractions = async (
   staffId: string,
   params?: StaffInteractionsParams
 ): Promise<Interaction[]> => {
-  return get<Interaction[]>(`/staff/${staffId}/interactions`, { params });
+  return get<Interaction[]>(`/staff/${staffId}/interactions`, { params: params as Record<string, unknown> });
 };
 
 // ============================================
@@ -212,7 +212,7 @@ export const getInteractionStats = async (
   avgTotalDuration: number;
   completedCount: number;
 }> => {
-  return get('/interactions/stats', { params });
+  return get('/interactions/stats', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -229,7 +229,7 @@ export const getDurationByDepartment = async (
     count: number;
   }>
 > => {
-  return get('/interactions/stats/by-department', { params });
+  return get('/interactions/stats/by-department', { params: params as Record<string, unknown> });
 };
 
 /**
@@ -247,7 +247,7 @@ export const getPredictionAccuracy = async (
     percentage: number;
   }>;
 }> => {
-  return get('/interactions/prediction-accuracy', { params });
+  return get('/interactions/prediction-accuracy', { params: params as Record<string, unknown> });
 };
 
 // ============================================
@@ -271,7 +271,7 @@ export const getMLTrainingData = async (
   }>;
   totalRecords: number;
 }> => {
-  return get('/interactions/ml-training-data', { params });
+  return get('/interactions/ml-training-data', { params: params as Record<string, unknown> });
 };
 
 // ============================================

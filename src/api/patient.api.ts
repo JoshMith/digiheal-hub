@@ -105,7 +105,7 @@ export const updatePatient = async (
 export const searchPatients = async (
   params: PatientSearchParams
 ): Promise<PaginatedResponse<Patient>> => {
-  const response = await get<Patient[]>('/patients', { params });
+  const response = await get<Patient[]>('/patients', { params: params as unknown as Record<string, unknown> });
   return response as unknown as PaginatedResponse<Patient>;
 };
 
@@ -115,7 +115,7 @@ export const searchPatients = async (
 export const getAllPatients = async (
   params?: PatientSearchParams
 ): Promise<PaginatedResponse<Patient>> => {
-  const response = await get<Patient[]>('/patients', { params });
+  const response = await get<Patient[]>('/patients', { params: params as unknown as Record<string, unknown> });
   return response as unknown as PaginatedResponse<Patient>;
 };
 
@@ -139,7 +139,7 @@ export const getPatientVitals = async (
   patientId: string,
   params?: PatientVitalsParams
 ): Promise<VitalSigns[]> => {
-  return get<VitalSigns[]>(`/patients/${patientId}/vitals`, { params });
+  return get<VitalSigns[]>(`/patients/${patientId}/vitals`, { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -170,7 +170,7 @@ export const getPatientAppointments = async (
   patientId: string,
   params?: PatientAppointmentsParams
 ): Promise<Appointment[]> => {
-  return get<Appointment[]>(`/patients/${patientId}/appointments`, { params });
+  return get<Appointment[]>(`/patients/${patientId}/appointments`, { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -179,7 +179,7 @@ export const getPatientAppointments = async (
 export const getMyAppointments = async (
   params?: PatientAppointmentsParams
 ): Promise<Appointment[]> => {
-  return get<Appointment[]>('/patients/me/appointments', { params });
+  return get<Appointment[]>('/patients/me/appointments', { params: params as unknown as Record<string, unknown> });
 };
 
 // ============================================
@@ -193,7 +193,7 @@ export const getPatientPrescriptions = async (
   patientId: string,
   params?: PatientPrescriptionsParams
 ): Promise<Prescription[]> => {
-  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params });
+  return get<Prescription[]>(`/patients/${patientId}/prescriptions`, { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -202,7 +202,7 @@ export const getPatientPrescriptions = async (
 export const getMyPrescriptions = async (
   params?: PatientPrescriptionsParams
 ): Promise<Prescription[]> => {
-  return get<Prescription[]>('/patients/me/prescriptions', { params });
+  return get<Prescription[]>('/patients/me/prescriptions', { params: params as unknown as Record<string, unknown> });
 };
 
 // ============================================
@@ -216,7 +216,7 @@ export const getPatientNotifications = async (
   patientId: string,
   params?: PatientNotificationsParams
 ): Promise<Notification[]> => {
-  return get<Notification[]>(`/patients/${patientId}/notifications`, { params });
+  return get<Notification[]>(`/patients/${patientId}/notifications`, { params: params as unknown as Record<string, unknown> });
 };
 
 /**
@@ -225,7 +225,7 @@ export const getPatientNotifications = async (
 export const getMyNotifications = async (
   params?: PatientNotificationsParams
 ): Promise<Notification[]> => {
-  return get<Notification[]>('/patients/me/notifications', { params });
+  return get<Notification[]>('/patients/me/notifications', { params: params as unknown as Record<string, unknown> });
 };
 
 /**
