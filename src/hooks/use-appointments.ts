@@ -319,14 +319,14 @@ export function useAssignStaff() {
 }
 
 // Predict appointment duration using ML model
-export function usePredictDuration(params: PredictAppointmentDurationRequest) {
+export function usePredictDuration(params?: PredictAppointmentDurationRequest) {
   return useQuery({
     queryKey: [...appointmentKeys.all, "predict-duration", params] as const,
     queryFn: async () => {
       const response = await post<MLPredictionResponse>('/appointments/predict-duration', params);
       return response;
     },
-    enabled: !!params.department && !!params.priority && !!params.appointmentType,
+    enabled: !!params?.department && !!params?.priority && !!params?.appointmentType,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 }
