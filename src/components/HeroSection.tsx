@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, FileText, Users, ArrowRight, Shield, Activity, Clock, Pill } from "lucide-react";
 import { Link } from "react-router-dom";
-import heroImage from "@/assets/medical-hero.jpg";
+import heroImage from "@/assets/african-hero.jpg";
 
 const HeroSection = () => {
   return (
@@ -11,10 +11,10 @@ const HeroSection = () => {
       <div className="absolute inset-0 z-0">
         <img
           src={heroImage}
-          alt="Modern medical center with digital health technology"
-          className="w-full h-full object-cover opacity-10"
+          alt="African healthcare professional consulting with university student patient"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-hero opacity-90"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/70 to-primary/90"></div>
       </div>
 
       {/* Content */}
