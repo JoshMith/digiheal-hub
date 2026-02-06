@@ -24,10 +24,16 @@ export const patientKeys = {
 };
 
 // Get all patients (staff/admin)
+// In src/hooks/use-patients.ts
 export function usePatients(params?: PaginationParams & { search?: string }) {
   return useQuery({
     queryKey: patientKeys.list(params),
-    queryFn: () => patientApi.getAllPatients(params),
+    queryFn: async () => {
+      console.log('🔍 Fetching patients with params:', params);
+      const data = await patientApi.getAllPatients(params);
+      console.log('✅ Received patients:', data);
+      return data;
+    },
   });
 }
 

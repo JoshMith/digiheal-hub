@@ -232,7 +232,7 @@ export default function PatientDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/staff/patients')}
+            onClick={() => navigate('/staff-portal')}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back

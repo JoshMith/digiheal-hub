@@ -41,7 +41,8 @@ import {
   Mail,
   XCircle,
   LogOut,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
@@ -59,7 +60,7 @@ const PatientDashboard = () => {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
-  
+
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const { toast } = useToast();
@@ -265,7 +266,7 @@ const PatientDashboard = () => {
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
-      
+
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
@@ -289,8 +290,8 @@ const PatientDashboard = () => {
 
   // Check if appointment can be cancelled
   const canCancelAppointment = (appointment: Appointment) => {
-    return appointment.status === AppointmentStatus.SCHEDULED || 
-           appointment.status === AppointmentStatus.CHECKED_IN;
+    return appointment.status === AppointmentStatus.SCHEDULED ||
+      appointment.status === AppointmentStatus.CHECKED_IN;
   };
 
   // Handle API errors gracefully
@@ -306,10 +307,17 @@ const PatientDashboard = () => {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="flex items-center gap-5">
+              <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
               <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-medium">
-                <AvatarImage src={patientData.avatar} alt={patientData.name} />
                 <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl font-semibold">
-                  {patientData.name.split(' ').map(n => n[0]).join('')}
+                  {(() => {
+                    const name = patientData.name;
+                    if (!name || !name.trim()) return 'U';
+                    const parts = name.trim().split(/\s+/);
+                    return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'U';
+                  })()}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -337,9 +345,9 @@ const PatientDashboard = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setLogoutDialogOpen(true)} 
+              <Button
+                variant="outline"
+                onClick={() => setLogoutDialogOpen(true)}
                 className="shadow-soft border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -549,9 +557,9 @@ const PatientDashboard = () => {
                             </Badge>
                           </div>
                           {canCancelAppointment(apt) && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
                               onClick={() => openCancelDialog(apt)}
                             >
@@ -721,9 +729,9 @@ const PatientDashboard = () => {
                           </Badge>
                         </div>
                         {canCancelAppointment(apt) && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
                             onClick={() => openCancelDialog(apt)}
                           >

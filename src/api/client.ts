@@ -218,6 +218,7 @@ export const handleApiError = (error: unknown): ApiError => {
 
 /**
  * Make a GET request
+ * Detects paginated responses and preserves meta
  */
 export async function get<T>(
   url: string,
@@ -230,12 +231,19 @@ export async function get<T>(
     if (!response.data.success) {
       throw new ApiError(response.data.message, 400, response.data.errors);
     }
+    
+    // If the response has 'meta', it's paginated - return the full response (without success field)
+    if ('meta' in response.data) {
+      const { success, ...rest } = response.data;
+      return rest as T;
+    }
+    
+    // Otherwise, unwrap to just the data
     return response.data.data as T;
   } catch (error) {
     throw handleApiError(error);
   }
 }
-
 /**
  * Make a POST request
  */

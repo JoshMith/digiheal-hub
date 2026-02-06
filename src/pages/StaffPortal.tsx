@@ -287,9 +287,13 @@ const StaffPortal = () => {
                 <ArrowLeft className="h-5 w-5" />
               </Link>
               <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-medium">
-                <AvatarImage src={staffData.avatar} alt={staffData.name} />
                 <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl font-semibold">
-                  {staffData.name.split(' ').map(n => n[0]).join('')}
+                  {(() => {
+                    const name = staffData.name;
+                    if (!name || !name.trim()) return 'U';
+                    const parts = name.trim().split(/\s+/);
+                    return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'U';
+                  })()}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -582,9 +586,9 @@ const StaffPortal = () => {
                                       const appointment: Appointment = {
                                         id: interaction.appointmentId || '',
                                         patientId: interaction.patientId || '',
-                                        department: interaction.department ,
+                                        department: interaction.department,
                                         priority: interaction.priority as PriorityLevel,
-                                        type: interaction.appointmentType as AppointmentType ,
+                                        type: interaction.appointmentType as AppointmentType,
                                         appointmentTime: interaction.checkInTime || new Date().toISOString(),
                                         appointmentDate: new Date().toISOString(),
                                         status: 'CHECKED_IN' as AppointmentStatus,

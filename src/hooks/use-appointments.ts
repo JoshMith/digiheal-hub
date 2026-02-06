@@ -91,12 +91,14 @@ export function useStaffAppointments(
 export function useTodayAppointments(department?: string) {
   return useQuery({
     queryKey: appointmentKeys.today(department as Department),
-    queryFn: () =>
-      department
-        ? appointmentApi.getTodayAppointments({
-            department: department as Department,
-          })
-        : appointmentApi.getTodayAppointments(),
+    queryFn: async () => {
+      console.log('🔍 Fetching today appointments for:', department);
+      const data = department
+        ? await appointmentApi.getTodayAppointments({ department: department as Department })
+        : await appointmentApi.getTodayAppointments();
+      console.log('✅ Received today appointments:', data);
+      return data;
+    },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
