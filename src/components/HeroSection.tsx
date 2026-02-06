@@ -14,7 +14,7 @@ const HeroSection = () => {
           alt="African healthcare professional consulting with university student patient"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/70 to-primary/90"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/85 via-primary/80 to-primary/95"></div>
       </div>
 
       {/* Content */}
@@ -22,17 +22,17 @@ const HeroSection = () => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Main Heading */}
           <div className="animate-fade-in">
-            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 backdrop-blur-sm">
               <Activity className="h-4 w-4" />
               Smart Healthcare Management
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
               Transform Healthcare at
-              <span className="block bg-gradient-to-r from-accent to-accent-hover bg-clip-text text-transparent">
+              <span className="block text-accent drop-shadow-lg">
                 DKUT Medical Center
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-primary-foreground/90 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/95 mb-8 max-w-3xl mx-auto leading-relaxed drop-shadow-md">
               Experience modern healthcare with our digital platform. 
               Smart scheduling, prescription management, and comprehensive medical records — all in one place.
             </p>
@@ -48,7 +48,7 @@ const HeroSection = () => {
               </Button>
             </Link>
             <Link to="/book-appointment">
-              <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20">
+              <Button size="lg" variant="outline" className="bg-white/10 border-white/40 text-white hover:bg-white/20 backdrop-blur-sm">
                 <Calendar className="mr-2 h-5 w-5" />
                 Book Appointment
               </Button>
@@ -95,20 +95,20 @@ const HeroSection = () => {
           </div>
 
           {/* Stats */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-8 mt-16 text-primary-foreground/90">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-8 mt-16 text-white">
             <div className="text-center">
-              <div className="text-3xl font-bold text-accent">95%</div>
-              <div className="text-sm">Patient Satisfaction</div>
+              <div className="text-3xl font-bold text-accent drop-shadow-md">95%</div>
+              <div className="text-sm text-white/90">Patient Satisfaction</div>
             </div>
-            <div className="hidden sm:block w-px h-12 bg-primary-foreground/20"></div>
+            <div className="hidden sm:block w-px h-12 bg-white/30"></div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-accent">60%</div>
-              <div className="text-sm">Reduced Wait Time</div>
+              <div className="text-3xl font-bold text-accent drop-shadow-md">60%</div>
+              <div className="text-sm text-white/90">Reduced Wait Time</div>
             </div>
-            <div className="hidden sm:block w-px h-12 bg-primary-foreground/20"></div>
+            <div className="hidden sm:block w-px h-12 bg-white/30"></div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-accent">24/7</div>
-              <div className="text-sm">Portal Access</div>
+              <div className="text-3xl font-bold text-accent drop-shadow-md">24/7</div>
+              <div className="text-sm text-white/90">Portal Access</div>
             </div>
           </div>
         </div>
