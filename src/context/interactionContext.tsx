@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import type { Interaction, Department, PriorityLevel, AppointmentType } from '@/types/api.types';
+import type { InteractionPhase, Department, PriorityLevel, AppointmentType } from '@/types/api.types';
 
 interface ActiveInteraction {
   interactionId: string;
@@ -9,7 +9,7 @@ interface ActiveInteraction {
   department: Department;
   priority: PriorityLevel;
   appointmentType: AppointmentType;
-  currentPhase: Interaction;
+  currentPhase: InteractionPhase;
   startTime: Date;
   phaseStartTime: Date;
   totalElapsed: number;
@@ -18,7 +18,7 @@ interface ActiveInteraction {
 interface InteractionContextType {
   activeInteraction: ActiveInteraction | null;
   startInteraction: (interaction: Omit<ActiveInteraction, 'startTime' | 'phaseStartTime' | 'totalElapsed'>) => void;
-  updatePhase: (phase: Interaction, elapsedInPhase: number) => void;
+  updatePhase: (phase: InteractionPhase, elapsedInPhase: number) => void;
   endInteraction: () => void;
   isMinimized: boolean;
   setIsMinimized: (minimized: boolean) => void;
@@ -74,7 +74,7 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
     setIsMinimized(false);
   }, []);
 
-  const updatePhase = useCallback((phase: Interaction, elapsedInPhase: number) => {
+  const updatePhase = useCallback((phase: InteractionPhase, elapsedInPhase: number) => {
     setActiveInteraction(prev => {
       if (!prev) return null;
       return {
