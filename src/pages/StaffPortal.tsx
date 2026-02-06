@@ -43,7 +43,7 @@ import { useDashboardMetrics } from "@/hooks/use-analytics";
 import { usePatients } from "@/hooks/use-patients";
 import { useLogout } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import type { Staff, Appointment, Department, Interaction, PriorityLevel, AppointmentStatus, AppointmentType } from "@/types/api.types";
+import type { Staff, Appointment, Department, Interaction, InteractionPhase, PriorityLevel, AppointmentStatus, AppointmentType } from "@/types/api.types";
 
 const StaffPortal = () => {
   const [activeTab, setActiveTab] = useState("queue");
@@ -235,7 +235,7 @@ const StaffPortal = () => {
       department: (interaction.department as Department) || staffDepartment || 'GENERAL_MEDICINE' as Department,
       priority: (interaction.priority as PriorityLevel) || 'NORMAL' as PriorityLevel,
       appointmentType: (interaction.appointmentType as AppointmentType) || 'WALK_IN' as AppointmentType,
-      currentPhase: interaction,
+      currentPhase: 'INTERACTION_IN_PROGRESS' as InteractionPhase,
     });
     
     // Start the consultation phase on the backend
