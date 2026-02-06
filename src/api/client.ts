@@ -3,16 +3,24 @@
 // Axios instance with JWT interceptors
 // ============================================
 
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import type { ApiResponse, RefreshTokenResponse } from '../types/api.types';
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
+import type { ApiResponse, RefreshTokenResponse } from "../types/api.types";
 
 // ============================================
 // CONFIGURATION
 // ============================================
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000' || 'https://miffiest-tom-pyramidally.ngrok-free.dev';
-const TOKEN_KEY = 'dkut_access_token';
-const REFRESH_TOKEN_KEY = 'dkut_refresh_token';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3000" ||
+  "https://miffiest-tom-pyramidally.ngrok-free.dev";
+const TOKEN_KEY = "dkut_access_token";
+const REFRESH_TOKEN_KEY = "dkut_refresh_token";
 
 // ============================================
 // TOKEN MANAGEMENT
@@ -50,7 +58,7 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -69,7 +77,7 @@ apiClient.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============================================
@@ -97,13 +105,17 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError<ApiResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     // If error is 401 and we haven't tried refreshing yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Skip refresh for auth endpoints
-      if (originalRequest.url?.includes('/auth/login') || 
-          originalRequest.url?.includes('/auth/register')) {
+      if (
+        originalRequest.url?.includes("/auth/login") ||
+        originalRequest.url?.includes("/auth/register")
+      ) {
         return Promise.reject(error);
       }
 
@@ -129,14 +141,14 @@ apiClient.interceptors.response.use(
       const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) {
         tokenManager.clearTokens();
-        window.location.href = '/auth';
+        window.location.href = "/auth";
         return Promise.reject(error);
       }
 
       try {
         const response = await axios.post<ApiResponse<RefreshTokenResponse>>(
           `${API_BASE_URL}/auth/refresh-token`,
-          { refreshToken }
+          { refreshToken },
         );
 
         if (response.data.success && response.data.data) {
@@ -149,12 +161,12 @@ apiClient.interceptors.response.use(
           }
           return apiClient(originalRequest);
         } else {
-          throw new Error('Token refresh failed');
+          throw new Error("Token refresh failed");
         }
       } catch (refreshError) {
         processQueue(refreshError as Error, null);
         tokenManager.clearTokens();
-        window.location.href = '/auth';
+        window.location.href = "/auth";
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -162,7 +174,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============================================
@@ -173,9 +185,13 @@ export class ApiError extends Error {
   status: number;
   errors?: Array<{ field: string; message: string }>;
 
-  constructor(message: string, status: number, errors?: Array<{ field: string; message: string }>) {
+  constructor(
+    message: string,
+    status: number,
+    errors?: Array<{ field: string; message: string }>,
+  ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.errors = errors;
   }
@@ -185,15 +201,15 @@ export const handleApiError = (error: unknown): ApiError => {
   if (axios.isAxiosError(error)) {
     const response = error.response?.data as ApiResponse | undefined;
     return new ApiError(
-      response?.message || error.message || 'An unexpected error occurred',
+      response?.message || error.message || "An unexpected error occurred",
       error.response?.status || 500,
-      response?.errors
+      response?.errors,
     );
   }
   if (error instanceof Error) {
     return new ApiError(error.message, 500);
   }
-  return new ApiError('An unexpected error occurred', 500);
+  return new ApiError("An unexpected error occurred", 500);
 };
 
 // ============================================
@@ -203,8 +219,13 @@ export const handleApiError = (error: unknown): ApiError => {
 /**
  * Make a GET request
  */
-export async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+export async function get<T>(
+  url: string,
+  options?: { params?: Record<string, unknown> },
+): Promise<T> {
   try {
+    const params = options?.params || {};
+
     const response = await apiClient.get<ApiResponse<T>>(url, { params });
     if (!response.data.success) {
       throw new ApiError(response.data.message, 400, response.data.errors);
