@@ -193,11 +193,18 @@ export interface PatientRegistrationRequest {
   dateOfBirth: string;
   gender: Gender;
   phone: string;
+  nationality?: string;
+  address?: string;
   bloodGroup?: string;
   emergencyContactName?: string;
+  emergencyContactRelationship?: string;
   emergencyContactPhone?: string;
+  emergencyContactEmail?: string;
+  insuranceProvider?: string;
+  policyNumber?: string;
   allergies?: string[];
   chronicConditions?: string[];
+  currentMedications?: string[];
 }
 
 export interface UpdatePatientRequest {

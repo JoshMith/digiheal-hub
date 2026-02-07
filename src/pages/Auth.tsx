@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Stethoscope, Mail, Lock, User, Phone, AlertCircle, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Stethoscope, Mail, Lock, User, Phone, AlertCircle, Loader2, MapPin, Globe, Heart, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
 import { Gender } from "@/types/api.types";
@@ -21,7 +23,7 @@ const Auth = () => {
     password: "",
   });
 
-  // Registration form state
+  // Registration form state - all backend fields
   const [registerData, setRegisterData] = useState({
     email: "",
     password: "",
@@ -32,8 +34,18 @@ const Auth = () => {
     dateOfBirth: "",
     gender: "" as Gender | "",
     phone: "",
+    nationality: "",
+    address: "",
+    bloodGroup: "",
     emergencyContactName: "",
+    emergencyContactRelationship: "",
     emergencyContactPhone: "",
+    emergencyContactEmail: "",
+    insuranceProvider: "",
+    policyNumber: "",
+    allergies: "",
+    chronicConditions: "",
+    currentMedications: "",
   });
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -47,7 +59,7 @@ const Auth = () => {
     setFormError(null);
   };
 
-  const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setRegisterData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -62,6 +74,10 @@ const Auth = () => {
       [name]: value,
     }));
   };
+
+  // Helper to split comma-separated string into trimmed array
+  const toArray = (value: string): string[] =>
+    value ? value.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,8 +128,18 @@ const Auth = () => {
         dateOfBirth: registerData.dateOfBirth,
         gender: registerData.gender as Gender,
         phone: registerData.phone,
+        nationality: registerData.nationality || undefined,
+        address: registerData.address || undefined,
+        bloodGroup: registerData.bloodGroup || undefined,
         emergencyContactName: registerData.emergencyContactName || undefined,
+        emergencyContactRelationship: registerData.emergencyContactRelationship || undefined,
         emergencyContactPhone: registerData.emergencyContactPhone || undefined,
+        emergencyContactEmail: registerData.emergencyContactEmail || undefined,
+        insuranceProvider: registerData.insuranceProvider || undefined,
+        policyNumber: registerData.policyNumber || undefined,
+        allergies: toArray(registerData.allergies).length > 0 ? toArray(registerData.allergies) : undefined,
+        chronicConditions: toArray(registerData.chronicConditions).length > 0 ? toArray(registerData.chronicConditions) : undefined,
+        currentMedications: toArray(registerData.currentMedications).length > 0 ? toArray(registerData.currentMedications) : undefined,
       });
       navigate("/patient-dashboard");
     } catch (err) {
@@ -125,7 +151,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-primary mx-auto mb-4">
@@ -219,180 +245,380 @@ const Auth = () => {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4 mt-6">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <form onSubmit={handleSignUp} className="space-y-5">
+                  {/* ---- Personal Information ---- */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                      <User className="h-4 w-4 text-primary" />
+                      Personal Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName">First Name *</Label>
+                          <Input
+                            id="firstName"
+                            name="firstName"
+                            placeholder="John"
+                            value={registerData.firstName}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName">Last Name *</Label>
+                          <Input
+                            id="lastName"
+                            name="lastName"
+                            placeholder="Doe"
+                            value={registerData.lastName}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="studentId">Student ID *</Label>
                         <Input
-                          id="firstName"
-                          name="firstName"
-                          placeholder="John"
-                          className="pl-10"
-                          value={registerData.firstName}
+                          id="studentId"
+                          name="studentId"
+                          placeholder="DKUT/2024/001"
+                          value={registerData.studentId}
                           onChange={handleRegisterChange}
                           required
                           disabled={isLoading}
                         />
                       </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        placeholder="Doe"
-                        value={registerData.lastName}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signupEmail">Email *</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signupEmail"
+                            name="email"
+                            type="email"
+                            placeholder="your.email@dkut.ac.ke"
+                            className="pl-10"
+                            value={registerData.email}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number *</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="phone"
+                            name="phone"
+                            type="tel"
+                            placeholder="+254 712 345 678"
+                            className="pl-10"
+                            value={registerData.phone}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                          <Input
+                            id="dateOfBirth"
+                            name="dateOfBirth"
+                            type="date"
+                            value={registerData.dateOfBirth}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Gender *</Label>
+                          <Select
+                            value={registerData.gender}
+                            onValueChange={(value) => handleSelectChange("gender", value)}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MALE">Male</SelectItem>
+                              <SelectItem value="FEMALE">Female</SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                              <SelectItem value="PREFER_NOT_TO_SAY">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nationality">Nationality</Label>
+                          <div className="relative">
+                            <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="nationality"
+                              name="nationality"
+                              placeholder="e.g., Kenyan"
+                              className="pl-10"
+                              value={registerData.nationality}
+                              onChange={handleRegisterChange}
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Blood Group</Label>
+                          <Select
+                            value={registerData.bloodGroup}
+                            onValueChange={(value) => handleSelectChange("bloodGroup", value)}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="A+">A+</SelectItem>
+                              <SelectItem value="A-">A-</SelectItem>
+                              <SelectItem value="B+">B+</SelectItem>
+                              <SelectItem value="B-">B-</SelectItem>
+                              <SelectItem value="AB+">AB+</SelectItem>
+                              <SelectItem value="AB-">AB-</SelectItem>
+                              <SelectItem value="O+">O+</SelectItem>
+                              <SelectItem value="O-">O-</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="address"
+                            name="address"
+                            placeholder="e.g., Nyeri, Kenya"
+                            className="pl-10"
+                            value={registerData.address}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="studentId">Student ID *</Label>
-                    <Input
-                      id="studentId"
-                      name="studentId"
-                      placeholder="DKUT/2024/001"
-                      value={registerData.studentId}
-                      onChange={handleRegisterChange}
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signupEmail"
-                        name="email"
-                        type="email"
-                        placeholder="your.email@dkut.ac.ke"
-                        className="pl-10"
-                        value={registerData.email}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        placeholder="+254 712 345 678"
-                        className="pl-10"
-                        value={registerData.phone}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
+                  <Separator />
+
+                  {/* ---- Medical Information ---- */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                      <Heart className="h-4 w-4 text-primary" />
+                      Medical Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="allergies">Allergies</Label>
+                        <Textarea
+                          id="allergies"
+                          name="allergies"
+                          placeholder="e.g., Penicillin, Peanuts (comma-separated)"
+                          value={registerData.allergies}
+                          onChange={handleRegisterChange}
+                          disabled={isLoading}
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground">Separate multiple entries with commas</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="chronicConditions">Chronic Conditions</Label>
+                        <Textarea
+                          id="chronicConditions"
+                          name="chronicConditions"
+                          placeholder="e.g., Asthma, Diabetes (comma-separated)"
+                          value={registerData.chronicConditions}
+                          onChange={handleRegisterChange}
+                          disabled={isLoading}
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground">Separate multiple entries with commas</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="currentMedications">Current Medications</Label>
+                        <Textarea
+                          id="currentMedications"
+                          name="currentMedications"
+                          placeholder="e.g., Metformin 500mg, Salbutamol inhaler (comma-separated)"
+                          value={registerData.currentMedications}
+                          onChange={handleRegisterChange}
+                          disabled={isLoading}
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground">Separate multiple entries with commas</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                      <Input
-                        id="dateOfBirth"
-                        name="dateOfBirth"
-                        type="date"
-                        value={registerData.dateOfBirth}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
+                  <Separator />
 
-                    <div className="space-y-2">
-                      <Label>Gender *</Label>
-                      <Select
-                        value={registerData.gender}
-                        onValueChange={(value) => handleSelectChange("gender", value)}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="MALE">Male</SelectItem>
-                          <SelectItem value="FEMALE">Female</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                          <SelectItem value="PREFER_NOT_TO_SAY">Prefer not to say</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {/* ---- Emergency Contact ---- */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                      <Phone className="h-4 w-4 text-primary" />
+                      Emergency Contact
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="emergencyContactName">Contact Name</Label>
+                          <Input
+                            id="emergencyContactName"
+                            name="emergencyContactName"
+                            placeholder="Jane Doe"
+                            value={registerData.emergencyContactName}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="emergencyContactRelationship">Relationship</Label>
+                          <Input
+                            id="emergencyContactRelationship"
+                            name="emergencyContactRelationship"
+                            placeholder="e.g., Parent, Sibling"
+                            value={registerData.emergencyContactRelationship}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
+                          <Input
+                            id="emergencyContactPhone"
+                            name="emergencyContactPhone"
+                            type="tel"
+                            placeholder="+254 700 000 000"
+                            value={registerData.emergencyContactPhone}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="emergencyContactEmail">Contact Email</Label>
+                          <Input
+                            id="emergencyContactEmail"
+                            name="emergencyContactEmail"
+                            type="email"
+                            placeholder="contact@email.com"
+                            value={registerData.emergencyContactEmail}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Blood Group (Optional)</Label>
-                    <Select
-                      onValueChange={(value) => handleSelectChange("bloodGroup", value)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select blood group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A+">A+</SelectItem>
-                        <SelectItem value="A-">A-</SelectItem>
-                        <SelectItem value="B+">B+</SelectItem>
-                        <SelectItem value="B-">B-</SelectItem>
-                        <SelectItem value="AB+">AB+</SelectItem>
-                        <SelectItem value="AB-">AB-</SelectItem>
-                        <SelectItem value="O+">O+</SelectItem>
-                        <SelectItem value="O-">O-</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Password *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signupPassword"
-                        name="password"
-                        type="password"
-                        placeholder="Create a strong password"
-                        className="pl-10"
-                        value={registerData.password}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
+                  <Separator />
+
+                  {/* ---- Insurance Information ---- */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                      <Shield className="h-4 w-4 text-primary" />
+                      Insurance Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="insuranceProvider">Insurance Provider</Label>
+                          <Input
+                            id="insuranceProvider"
+                            name="insuranceProvider"
+                            placeholder="e.g., NHIF, AAR"
+                            value={registerData.insuranceProvider}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="policyNumber">Policy Number</Label>
+                          <Input
+                            id="policyNumber"
+                            name="policyNumber"
+                            placeholder="Policy / member number"
+                            value={registerData.policyNumber}
+                            onChange={handleRegisterChange}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      At least 8 characters with uppercase, lowercase, and number
-                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="Confirm your password"
-                        className="pl-10"
-                        value={registerData.confirmPassword}
-                        onChange={handleRegisterChange}
-                        required
-                        disabled={isLoading}
-                      />
+                  <Separator />
+
+                  {/* ---- Account Security ---- */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                      <Lock className="h-4 w-4 text-primary" />
+                      Account Security
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signupPassword">Password *</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signupPassword"
+                            name="password"
+                            type="password"
+                            placeholder="Create a strong password"
+                            className="pl-10"
+                            value={registerData.password}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          At least 8 characters with uppercase, lowercase, and number
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            type="password"
+                            placeholder="Confirm your password"
+                            className="pl-10"
+                            value={registerData.confirmPassword}
+                            onChange={handleRegisterChange}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
