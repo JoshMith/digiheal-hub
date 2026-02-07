@@ -127,13 +127,11 @@ const StaffPortal = () => {
   // Analytics with API data or fallbacks
   const analytics = {
     todayPatients: dashboardMetrics?.totalPatientsToday || 0,
-    totalAppointments: todayAppointments?.length || 0,
-    completedConsultations: appointmentStats?.completed || 0,
-    averageWaitTime: interactionStats?.avgInteractionDuration
-      ? `${Math.round(interactionStats.avgInteractionDuration)} min`
-      : dashboardMetrics?.avgWaitTime
-        ? `${Math.round(dashboardMetrics.avgWaitTime)} min`
-        : "-- min",
+    totalAppointments: dashboardMetrics?.totalAppointments || 0,
+    completedConsultations: dashboardMetrics?.completedAppointments || 0,
+    averageWaitTime: dashboardMetrics?.avgWaitTime
+      ? `${Math.round(dashboardMetrics.avgWaitTime)} min`
+      : "-- min",
     todayChange: "+0",
     waitTimeChange: "0 min"
   };

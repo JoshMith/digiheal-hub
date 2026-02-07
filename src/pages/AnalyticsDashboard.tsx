@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,9 +49,11 @@ const AnalyticsDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("week");
 
-  // Calculate date range params
-  const getDateRangeParams = () => {
-    const endDate = new Date().toISOString();
+  // ✅ MEMOIZED - only recalculates when dateRange changes
+  const dateRangeParams = useMemo(() => {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // ✅ Normalize to end of day
+
     const startDate = new Date();
     switch (dateRange) {
       case "today":
@@ -59,22 +61,27 @@ const AnalyticsDashboard = () => {
         break;
       case "week":
         startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
         break;
       case "month":
         startDate.setMonth(startDate.getMonth() - 1);
+        startDate.setHours(0, 0, 0, 0);
         break;
       case "quarter":
         startDate.setMonth(startDate.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
         break;
     }
-    return { startDate: startDate.toISOString(), endDate };
-  };
 
-  const dateRangeParams = getDateRangeParams();
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+  }, [dateRange]); // ✅ Dependency: only recalculate when dateRange changes
 
   // API hooks - LAZY LOADING: Only fetch data for active tab to prevent rate limiting
   const { data: dashboardMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(dateRangeParams);
-  
+
   // Overview tab data - only fetch when overview or no specific tab is active
   const shouldFetchOverview = activeTab === 'overview';
   const { data: patientFlowData, isLoading: isLoadingFlow, refetch: refetchFlow } = usePatientFlowData({
@@ -87,21 +94,21 @@ const AnalyticsDashboard = () => {
     granularity: 'daily',
     enabled: shouldFetchOverview
   });
-  
+
   // Department tab data - only fetch when departments tab is active
   const shouldFetchDept = activeTab === 'departments';
   const { data: departmentLoad, isLoading: isLoadingDept, refetch: refetchDept } = useDepartmentLoad({
     ...dateRangeParams,
     enabled: shouldFetchDept
   });
-  
+
   // Staff tab data - only fetch when staff tab is active
   const shouldFetchStaff = activeTab === 'staff';
   const { data: staffPerformance, isLoading: isLoadingStaff, refetch: refetchStaff } = useStaffPerformance({
     ...dateRangeParams,
     enabled: shouldFetchStaff
   });
-  
+
   // Predictions tab data - only fetch when predictions tab is active
   const shouldFetchPredictions = activeTab === 'predictions';
   const { data: predictionAccuracy, isLoading: isLoadingPrediction, refetch: refetchPrediction } = usePredictionAccuracy({
@@ -121,57 +128,149 @@ const AnalyticsDashboard = () => {
   };
 
   // Format patient flow data for chart
-  const formattedFlowData = patientFlowData?.map((item: { hour?: string; time?: string; count?: number; patients?: number }) => ({
-    time: item.hour || item.time || '',
-    patients: item.count || item.patients || 0,
-  })) || [];
+  const formattedFlowData = useMemo(() => {
+    return patientFlowData?.map((item: any) => ({
+      time: item.time || item.hour || '',
+      patients: item.patients || item.count || 0,
+    })) || [];
+  }, [patientFlowData]); // ✅ Only recalculate when data changes
 
-  // Format department data for chart
-  const formattedDeptData = departmentLoad?.map((item: { department?: Department; name?: string; currentLoad?: number; patients?: number; avgWaitTime?: number; avgWait?: number }) => ({
-    name: item.department?.replace(/_/g, ' ') || item.name || '',
-    patients: item.currentLoad || item.patients || 0,
-    avgWait: item.avgWaitTime || item.avgWait || 0,
-  })) || [];
+  // ✅ DEBUG: Log active tab changes
+  console.log('📍 Current Active Tab:', activeTab);
 
-  // Format wait times data for chart
-  const formattedWaitData = waitTimeData?.map((item: { date?: string; actualWaitTime?: number; avgWait?: number; predictedWaitTime?: number; predicted?: number }) => ({
-    date: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
-    avgWait: item.actualWaitTime || item.avgWait || 0,
-    predicted: item.predictedWaitTime || item.predicted || 0,
-  })) || [];
+  // ✅ MEMOIZE department data with unwrapping
+  const formattedDeptData = useMemo(() => {
+    console.log('🔍 [DEPT] Raw data:', departmentLoad);
 
-  // Format staff performance data for table
-  const formattedStaffData = staffPerformance?.map((item: { staffName?: string; name?: string; patientsServed?: number; patients?: number; avgConsultationTime?: number; avgTime?: number; rating?: number }) => ({
-    name: item.staffName || item.name || '',
-    patients: item.patientsServed || item.patients || 0,
-    avgTime: item.avgConsultationTime || item.avgTime || 0,
-    rating: item.rating || 0,
-  })) || [];
+    // ✅ UNWRAP: Check if data is wrapped in { data: [...] }
+    const rawData = departmentLoad;
 
-  // Format prediction accuracy data for chart
-  const formattedPredictionData = predictionAccuracy?.map((item: { week?: string; period?: string; accuracy?: number }) => ({
-    week: item.week || item.period || '',
-    accuracy: item.accuracy || 0,
-  })) || [];
+    if (!rawData || !Array.isArray(rawData)) {
+      console.log('⚠️ [DEPT] No valid array data');
+      return [];
+    }
+
+    try {
+      const formatted = rawData.map((item: any) => ({
+        name: item.department?.replace(/_/g, ' ') || 'Unknown',
+        patients: item.appointments || item.interactions || 0,
+        avgWait: item.avgWaitTime || 0,
+      }));
+      console.log('✅ [DEPT] Formatted:', formatted);
+      return formatted;
+    } catch (error) {
+      console.error('❌ [DEPT] Error formatting:', error);
+      return [];
+    }
+  }, [departmentLoad]);
+
+  // ✅ MEMOIZE wait time data with unwrapping
+  const formattedWaitData = useMemo(() => {
+    console.log('🔍 [WAIT] Raw data:', waitTimeData);
+
+    // ✅ UNWRAP: Check if data is wrapped
+    const rawData = waitTimeData;
+
+    if (!rawData || !Array.isArray(rawData)) {
+      console.log('⚠️ [WAIT] No valid array data');
+      return [];
+    }
+
+    try {
+      return rawData.map((item: any) => ({
+        date: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
+        avgWait: item.actualWaitTime || item.avgWait || 0,
+        predicted: item.predictedWaitTime || item.predicted || 0,
+      }));
+    } catch (error) {
+      console.error('❌ [WAIT] Error formatting:', error);
+      return [];
+    }
+  }, [waitTimeData]);
+
+  // ✅ MEMOIZE staff data with unwrapping
+  const formattedStaffData = useMemo(() => {
+    console.log('🔍 [STAFF] Raw data:', staffPerformance);
+
+    // ✅ UNWRAP: Check if data is wrapped
+    const rawData = staffPerformance;
+
+    if (!rawData) {
+      console.log('⚠️ [STAFF] Data is undefined/null');
+      return [];
+    }
+
+    if (!Array.isArray(rawData)) {
+      console.error('❌ [STAFF] Data is not an array:', typeof rawData);
+      return [];
+    }
+
+    try {
+      const formatted = rawData.map((item: any) => ({
+        name: item.name || 'Unknown Staff',
+        patients: item.totalPatients || 0,
+        avgTime: item.avgDuration || 0,
+        rating: item.rating || 0,
+      }));
+      console.log('✅ [STAFF] Formatted:', formatted);
+      return formatted;
+    } catch (error) {
+      console.error('❌ [STAFF] Error formatting:', error);
+      return [];
+    }
+  }, [staffPerformance]);
+
+  // ✅ MEMOIZE prediction data with unwrapping
+  const formattedPredictionData = useMemo(() => {
+    console.log('🔍 [PRED] Raw data:', predictionAccuracy);
+
+    // ✅ UNWRAP: Extract data array from { data: [...], meta: {...} }
+    const rawData = predictionAccuracy;
+
+    if (!rawData || !Array.isArray(rawData)) {
+      console.log('⚠️ [PRED] No valid array data');
+      return [];
+    }
+
+    try {
+      const formatted = rawData.map((item: any) => ({
+        week: item.week || item.period || '',
+        accuracy: item.accuracy || 0,
+      }));
+      console.log('✅ [PRED] Formatted:', formatted);
+      return formatted;
+    } catch (error) {
+      console.error('❌ [PRED] Error formatting:', error);
+      return [];
+    }
+  }, [predictionAccuracy]);
 
   // Appointment type data (from dashboard metrics or defaults)
   const appointmentTypeData = [
-  { name: "Walk-in", value: 0, color: "hsl(var(--primary))" },
-  { name: "Scheduled", value: 0, color: "hsl(var(--accent))" },
-  { name: "Follow-up", value: 0, color: "hsl(var(--warning))" },
-  { name: "Emergency", value: 0, color: "hsl(var(--destructive))" },
-];
-// Show message: "Appointment type breakdown not available"
+    { name: "Walk-in", value: 0, color: "hsl(var(--primary))" },
+    { name: "Scheduled", value: 0, color: "hsl(var(--accent))" },
+    { name: "Follow-up", value: 0, color: "hsl(var(--warning))" },
+    { name: "Emergency", value: 0, color: "hsl(var(--destructive))" },
+  ];
 
   // Summary stats from API or fallbacks
-  const summaryStats = {
+  const summaryStats = useMemo(() => ({
     totalPatients: dashboardMetrics?.totalPatientsToday || 0,
     avgWaitTime: dashboardMetrics?.avgWaitTime || 0,
     completionRate: dashboardMetrics?.completionRate || 0,
     noShowRate: dashboardMetrics?.noShowRate || 0,
-  };
+    mlAccuracy: dashboardMetrics?.mlAccuracy || 0,
+  }), [dashboardMetrics]);
 
   const isLoading = isLoadingMetrics;
+
+  // ✅ DEBUG: Log all formatted data lengths
+  console.log('📊 Formatted Data Summary:', {
+    dept: formattedDeptData.length,
+    staff: formattedStaffData.length,
+    predictions: formattedPredictionData.length,
+    activeTab
+  });
 
   return (
     <div className="min-h-screen bg-gradient-subtle pt-20">
@@ -312,7 +411,7 @@ const AnalyticsDashboard = () => {
                   {isLoading ? (
                     <Skeleton className="h-7 w-14" />
                   ) : (
-                    <p className="text-2xl font-bold text-primary">{Math.round(Number(predictionAccuracy))}%</p>
+                    <p className="text-2xl font-bold text-primary">{Math.round(Number(summaryStats.mlAccuracy))}%</p>
                   )}
                   <p className="text-xs text-muted-foreground">ML Accuracy</p>
                 </div>
