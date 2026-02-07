@@ -114,19 +114,9 @@ const PatientDashboard = () => {
     emergencyContact: patientProfile?.emergencyContactPhone || "Not provided"
   };
 
-  // Safely get appointments array
-  const getAppointmentsArray = (): Appointment[] => {
-    if (!appointmentsData) return [];
-    if (Array.isArray(appointmentsData)) return appointmentsData;
-    if (typeof appointmentsData === 'object' && appointmentsData !== null) {
-      if ('data' in appointmentsData && Array.isArray((appointmentsData as { data: unknown }).data)) {
-        return (appointmentsData as { data: Appointment[] }).data;
-      }
-    }
-    return [];
-  };
-
-  const appointmentsArray = getAppointmentsArray();
+  // Hooks now return clean arrays/objects thanks to extractArray/extractObject in hooks
+  // No need for manual extraction functions
+  const appointmentsArray: Appointment[] = Array.isArray(appointmentsData) ? appointmentsData : [];
 
   // Get upcoming appointments
   const upcomingAppointments = appointmentsArray
@@ -135,37 +125,15 @@ const PatientDashboard = () => {
       apt.status === AppointmentStatus.CHECKED_IN
     );
 
-  // Safely get prescriptions array
-  const getPrescriptionsArray = (): Prescription[] => {
-    if (!prescriptionsData) return [];
-    if (Array.isArray(prescriptionsData)) return prescriptionsData;
-    if (typeof prescriptionsData === 'object' && prescriptionsData !== null) {
-      if ('data' in prescriptionsData && Array.isArray((prescriptionsData as { data: unknown }).data)) {
-        return (prescriptionsData as { data: Prescription[] }).data;
-      }
-    }
-    return [];
-  };
-
-  const prescriptionsArray = getPrescriptionsArray();
+  // Prescriptions are now clean arrays from the hook
+  const prescriptionsArray: Prescription[] = Array.isArray(prescriptionsData) ? prescriptionsData : [];
 
   // Get active medications
   const activeMedications = prescriptionsArray
     .filter((rx) => rx.status === PrescriptionStatus.ACTIVE || rx.status === PrescriptionStatus.DISPENSED);
 
-  // Get latest vital signs
-  const getVitalSignsArray = (): VitalSigns[] => {
-    if (!vitalSignsData) return [];
-    if (Array.isArray(vitalSignsData)) return vitalSignsData;
-    if (typeof vitalSignsData === 'object' && vitalSignsData !== null) {
-      if ('data' in vitalSignsData && Array.isArray((vitalSignsData as { data: unknown }).data)) {
-        return (vitalSignsData as { data: VitalSigns[] }).data;
-      }
-    }
-    return [];
-  };
-
-  const vitalSignsArray = getVitalSignsArray();
+  // Vital signs are now clean arrays from the hook
+  const vitalSignsArray: VitalSigns[] = Array.isArray(vitalSignsData) ? vitalSignsData : [];
   const latestVitals = vitalSignsArray[0];
 
   // Mock notifications (would come from notification API)

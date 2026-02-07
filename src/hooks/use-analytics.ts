@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, type AnalyticsDateRange } from '@/api';
-import type { Department } from '@/types/api.types';
+import type { Department, DashboardMetrics } from '@/types/api.types';
+import { extractObject, DASHBOARD_METRICS_DEFAULTS } from '@/utils/api-helpers';
 
 // Cache durations to prevent rate limiting - increased for better performance
 const STALE_TIME = 10 * 60 * 1000; // 10 minutes - data is fresh for 10 min
@@ -19,14 +20,14 @@ export const analyticsKeys = {
   todayStats: () => [...analyticsKeys.all, 'today-stats'] as const,
 };
 
-// Get dashboard metrics
+// Get dashboard metrics - safely extracted
 export function useDashboardMetrics(params?: AnalyticsDateRange) {
   return useQuery({
     queryKey: analyticsKeys.dashboard(params),
     queryFn: async () => {
       const response = await analyticsApi.getDashboard(params);
-      // axios interceptor already unwraps response.data, so response IS the data
-      return response;
+      // Safely extract metrics, handling various response wrapper formats
+      return extractObject(response, DASHBOARD_METRICS_DEFAULTS) as DashboardMetrics;
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,

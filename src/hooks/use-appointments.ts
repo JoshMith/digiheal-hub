@@ -12,6 +12,7 @@ import type {
   PredictAppointmentDurationRequest,
   MLPredictionResponse,
 } from "@/types/api.types";
+import { extractArray, extractObject, APPOINTMENT_STATS_DEFAULTS } from "@/utils/api-helpers";
 
 // Cache durations to prevent rate limiting
 const STALE_TIME = 2 * 60 * 1000; // 2 minutes
@@ -49,18 +50,21 @@ export function useAppointment(appointmentId: string) {
   });
 }
 
-// Get patient appointments
+// Get patient appointments - safely extracted as array
 export function usePatientAppointments(
   patientId: string,
   params?: PaginationParams & { status?: AppointmentStatus },
 ) {
   return useQuery({
     queryKey: appointmentKeys.byPatient(patientId, params),
-    queryFn: () =>
-      appointmentApi.getAppointments({
+    queryFn: async () => {
+      const response = await appointmentApi.getAppointments({
         patientId,
         ...params,
-      }),
+      });
+      // Response may be PaginatedResponse or direct array - extract safely
+      return extractArray<Appointment>(response);
+    },
     enabled: !!patientId,
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
@@ -87,17 +91,16 @@ export function useStaffAppointments(
   });
 }
 
-// Get today's appointments by department
+// Get today's appointments by department - safely extracted as array
 export function useTodayAppointments(department?: string) {
   return useQuery({
     queryKey: appointmentKeys.today(department as Department),
     queryFn: async () => {
-      console.log('🔍 Fetching today appointments for:', department);
       const data = department
         ? await appointmentApi.getTodayAppointments({ department: department as Department })
         : await appointmentApi.getTodayAppointments();
-      console.log('✅ Received today appointments:', data);
-      return data;
+      // Ensure we always return an array
+      return extractArray<Appointment>(data);
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
@@ -124,7 +127,7 @@ export function useAvailableSlots(params: {
   });
 }
 
-// Get appointment stats
+// Get appointment stats - safely extracted as object
 export function useAppointmentStats(params?: {
   startDate?: string;
   endDate?: string;
@@ -132,7 +135,10 @@ export function useAppointmentStats(params?: {
 }) {
   return useQuery({
     queryKey: appointmentKeys.stats(params),
-    queryFn: () => appointmentApi.getAppointmentStats(params),
+    queryFn: async () => {
+      const response = await appointmentApi.getAppointmentStats(params);
+      return extractObject(response, APPOINTMENT_STATS_DEFAULTS);
+    },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
