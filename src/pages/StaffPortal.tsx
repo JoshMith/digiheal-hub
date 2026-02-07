@@ -738,13 +738,13 @@ const StaffPortal = () => {
                             <Skeleton className="h-8 w-16" />
                           </div>
                         ))
-                      ) : !patientsData?.data?.length ? (
+                      ) : !patientsData?.length ? (
                         <div className="text-center py-8 text-muted-foreground">
                           <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                           <p>{searchTerm ? 'No patients found' : 'Search for patients'}</p>
                         </div>
                       ) : (
-                        patientsData.data.map((patient) => (
+                        patientsData.map((patient) => (
                           <div
                             key={patient.id}
                             className="flex items-center justify-between p-3 mb-2 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"

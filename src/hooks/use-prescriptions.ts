@@ -3,9 +3,11 @@ import { prescriptionApi } from '@/api';
 import { 
   CreatePrescriptionRequest, 
   UpdatePrescriptionRequest,
+  Prescription,
   PrescriptionStatus,
   PaginationParams
 } from '@/types/api.types';
+import { extractArray } from '@/utils/api-helpers';
 
 // Query keys
 export const prescriptionKeys = {
@@ -34,7 +36,7 @@ export function usePrescription(prescriptionId: string) {
   });
 }
 
-// Get patient prescriptions
+// Get patient prescriptions - safely extracted as array
 export function usePatientPrescriptions(
   patientId: string, 
   params?: {
@@ -45,7 +47,10 @@ export function usePatientPrescriptions(
 ) {
   return useQuery({
     queryKey: prescriptionKeys.byPatient(patientId, params),
-    queryFn: () => prescriptionApi.getPatientPrescriptions(patientId, params),
+    queryFn: async () => {
+      const response = await prescriptionApi.getPatientPrescriptions(patientId, params);
+      return extractArray<Prescription>(response);
+    },
     enabled: !!patientId,
   });
 }

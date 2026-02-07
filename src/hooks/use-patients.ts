@@ -7,6 +7,7 @@ import type {
   CreateVitalSignsRequest,
   PaginationParams
 } from '@/types/api.types';
+import { extractArray, extractObject, PATIENT_STATS_DEFAULTS } from '@/utils/api-helpers';
 
 // Query keys
 export const patientKeys = {
@@ -29,10 +30,9 @@ export function usePatients(params?: PaginationParams & { search?: string }) {
   return useQuery({
     queryKey: patientKeys.list(params),
     queryFn: async () => {
-      console.log('🔍 Fetching patients with params:', params);
       const data = await patientApi.getAllPatients(params);
-      console.log('✅ Received patients:', data);
-      return data;
+      // Safely extract the patients array from paginated or direct response
+      return extractArray<Patient>(data);
     },
   });
 }
@@ -75,16 +75,19 @@ export function usePatientHistory(patientId: string, params?: PaginationParams) 
   });
 }
 
-// Get patient stats
+// Get patient stats - safely extracted
 export function usePatientStats(patientId: string) {
   return useQuery({
     queryKey: patientKeys.stats(patientId),
-    queryFn: () => patientApi.getPatientStats(patientId),
+    queryFn: async () => {
+      const response = await patientApi.getPatientStats(patientId);
+      return extractObject(response, PATIENT_STATS_DEFAULTS);
+    },
     enabled: !!patientId,
   });
 }
 
-// Get patient vital signs
+// Get patient vital signs - safely extracted as array
 export function usePatientVitalSigns(patientId: string, params?: { 
   page?: number; 
   limit?: number;
@@ -93,7 +96,10 @@ export function usePatientVitalSigns(patientId: string, params?: {
 }) {
   return useQuery({
     queryKey: patientKeys.vitalSigns(patientId, params),
-    queryFn: () => patientApi.getPatientVitals(patientId, params),
+    queryFn: async () => {
+      const response = await patientApi.getPatientVitals(patientId, params);
+      return extractArray<VitalSigns>(response);
+    },
     enabled: !!patientId,
   });
 }
